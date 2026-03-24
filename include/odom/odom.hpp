@@ -711,21 +711,27 @@ private:
       // v_fwd = dist / dt
       float32x4_t v_fwd = vmulq_f32(dist, fast_recip(v_dt));
 
+      // new v_y = (1 - alpha * delta_t) * v_y + delta_t * v_x * w
+      float32x4_t lv_centr = vmulq_f32(vmulq_f32(v_fwd, vmulq_f32(dh, fast_recip(v_dt))), v_dt);
+      float32x4_t lv_fric = vmulq_f32(vsubq_f32(v_one, vdupq_n_f32(lateral_viscous_friction * dt)), lv);
+      float32x4_t lv_raw = vaddq_f32(lv_fric, lv_centr);
+      
       // lv_new = (lv * cf) + (v_fwd * sf) - (lv * k_fric * dt)
-      float32x4_t lv_rot = vaddq_f32(vmulq_f32(lv, cf), vmulq_f32(v_fwd, sf));
-      float32x4_t lv_fric =
-          vmulq_f32(lv, vdupq_n_f32(lateral_viscous_friction * dt));
-      float32x4_t lv_raw = vsubq_f32(lv_rot, lv_fric);
+      // float32x4_t lv_rot = vaddq_f32(vmulq_f32(lv, cf), vmulq_f32(v_fwd, sf));
+      //float32x4_t lv_fric =
+      //    vmulq_f32(lv, vdupq_n_f32(lateral_viscous_friction * dt));
+      // float32x4_t lv_raw = vsubq_f32(lv_rot, lv_fric);
 
       // deadband: if lateral velocity < 0.2 inches/s, snap to zero.
       const float32x4_t v_threshold = vdupq_n_f32(0.2f);
       uint32x4_t small_lv = vcltq_f32(vabsq_f32(lv_raw), v_threshold);
       float32x4_t lv_new = vbslq_f32(small_lv, v_zero, lv_raw);
 
-      // add existing slip (lv) to kinematics.
+      // add existing slip (lv) to kinematics. d = (v + v0) / 2 * t
       float32x4_t deltaX =
-          vaddq_f32(deltaX_kinematic,
-                    vmulq_f32(vmulq_f32(v_half, vaddq_f32(lv, lv_new)), v_dt));
+         vaddq_f32(deltaX_kinematic,
+                   vmulq_f32(vmulq_f32(v_half, vaddq_f32(lv, lv_new)), v_dt));
+
 
       // update the particle's position in field frame (compass convention: +y
       // north, +x east, 0=north, cw+)
