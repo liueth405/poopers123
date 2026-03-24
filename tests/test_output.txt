@@ -1,0 +1,40 @@
+Testing Math Utilities...
+  haddq_f32 sum: 10
+  anglewrap results: [-3.04159, 3.04159, 0.5, 0.716815]
+  Math Utilities: PASS
+Testing Fast Sine/Cosine...
+  sin results: [0, 1, -8.74228e-08, -1]
+  cos results: [1, -4.37114e-08, -1, -4.37114e-08]
+  Fast Sine/Cosine: PASS
+Testing Raycast (Simple Box)...
+  Raycast distance (0 deg): 5
+  Raycast distance (45 deg): 7.07114
+  Raycast Simple: PASS
+Testing Particle Filter Basics...
+  Initial Estimate: x=10.1697, y=19.9889, theta=0.415116
+  After Zero Update: x=10.1715, y=19.999, theta=0.499435
+  After Forward Move: x=10.266, y=29.9109, theta=0.558657
+  Particle Filter Basics: PASS
+Testing Particle Filter Turning...
+  After 90deg Turn: x=0.249598, y=0.235831, theta=89.6682
+  Particle Filter Turning: PASS
+Testing Particle Filter Curved Motion...
+  After Arc Move (Single Step): x=9.77139, y=2.95529, theta=90.0473
+  Particle Filter Curved: PASS
+Testing Particle Filter Localization (Weighting)...
+  After Localization: x=0.145165, y=0.0846758, theta=0.237007
+  Particle Filter Localization: PASS
+Testing Particle Filter Angled Localization...
+  After Angled Localization: x=39.9825, y=40.0947, theta=44.9872
+  Particle Filter Angled: PASS
+Testing Particle Filter Sensor Offset (dx, dy)...
+  After Offset Localization: x=-0.0423854, y=0.0983598, theta=0.641781
+  Particle Filter Sensor Offset: PASS
+Testing Particle Filter Resampling...
+  Estimate after resample move: x=-1.58704, y=9.93879
+  Particle Filter Resampling: PASS
+Testing Particle Filter Dynamic Divergence...
+  Near Estimate: x=4.8562
+  Far Estimate: x=-5.02563
+  Particle Filter Divergence: PASS
+ALL TESTS PASSED!
