@@ -809,13 +809,20 @@ private:
         vmlsq_f32(vmulq_n_f32(v_pca, s.cos_a), v_psa, vdupq_n_f32(s.sin_a));
     RayHit4 hit0 = raycast4(map, v_ox, v_oy, v_rx0, v_ry0);
 
+    // evaluate the center ray (0 divergence) for the strongest-return distance
+    // the peak of the Gaussian weight at the center is exactly 1.0f
+    float32x4_t d0 = vminq_f32(hit0.distance, vdupq_n_f32(max_range));
+    float32x4_t cos_alpha0 = vabsq_f32(vaddq_f32(
+          vmulq_f32(hit0.normal_x, v_rx0), vmulq_f32(hit0.normal_y, v_ry0)));
+    
+    // set the best variables with the center ray before checking the rest
+    float32x4_t v_max_power = vmulq_f32(cos_alpha0, fast_recip(vmulq_f32(d0, d0)));
+    float32x4_t v_best_dist = d0;
+
     // determine dynamic mode: 24 deg if < 8 inches (mode 0), else 36 deg
     // (mode 1)
     const float32x4_t v_eight = vdupq_n_f32(8.0f);
-    uint32x4_t is_near = vcltq_f32(hit0.distance, v_eight);
-
-    float32x4_t v_best_dist = vdupq_n_f32(max_range);
-    float32x4_t v_max_power = vdupq_n_f32(-1.0f);
+    uint32x4_t is_near = vcltq_f32(d0, v_eight);
 
     // ray bundle (8 rays)
     for (int r = 0; r < 8; ++r) {

@@ -183,6 +183,7 @@ if __name__ == "__main__":
         ((4, 0), (4, 4)),
         ((4, 4), (0, 4)),
         ((0, 4), (0, 0)),
+        ((2-.11/2, 4-.12), (2+.11/2, 4-.12))
     ]
 
     #walls = [((-70.5, -70.5), (70.5, -70.5)),
@@ -190,12 +191,12 @@ if __name__ == "__main__":
     #         ((70.5, 70.5), (-70.5, 70.5)),
     #         ((-70.5, 70.5), (-70.5, -70.5))]
     
-    origin = (0.3175, 4-.4953 )
+    origin = (2, 4-.510)
     #origin = (39.825, 39.9232)
     #heading = 90 - 44.7
-    heading = 90 + 33.6
+    heading = 90
     # 560
-    sim = LidarSimulator(divergence_deg=36.0, num_rays=4)
+    sim = LidarSimulator(divergence_deg=36.0, num_rays=8)
     
     print(f"Simulating beam hitting a corner from {origin} at {heading} degrees...")
     plot_simulation(origin, heading, walls, sim)

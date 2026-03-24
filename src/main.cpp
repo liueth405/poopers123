@@ -99,7 +99,7 @@ void opcontrol() {
 	int startTime = pros::millis();
     
     float readings[2] = {43.13f, 43.13f};
-    for(int i=0; i<50; ++i) {
+    for(int i=0; i<10; ++i) {
         pf.update(45.0f * DEG_TO_RAD, 45.0f * DEG_TO_RAD, 0.0, 0.0, readings, 0.01);
     }
     
