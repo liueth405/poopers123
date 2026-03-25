@@ -569,15 +569,15 @@ public:
           continue;
 
         // compass convention sensor world position (+y 0, CW+)
-        // x is East, y is North s.dx = Forward, s.dy = Right
-        // E = E_p + s.dy * cos(pt) + s.dx * sin(pt)
-        // N = N_p + s.dx * cos(pt) - s.dy * sin(pt)
+        // x is east, y is north. s.dx = right, s.dy =fForward
+        // E = E_p + s.dx * cos(pt) + s.dy * sin(pt)
+        // N = N_p + s.dy * cos(pt) - s.dx * sin(pt)
         float32x4_t v_ox =
-            vaddq_f32(v_px, vmlaq_f32(vmulq_f32(vdupq_n_f32(s.dy), v_pca),
-                                      vdupq_n_f32(s.dx), v_psa));
-        float32x4_t v_oy =
-            vaddq_f32(v_py, vmlsq_f32(vmulq_f32(vdupq_n_f32(s.dx), v_pca),
+            vaddq_f32(v_px, vmlaq_f32(vmulq_f32(vdupq_n_f32(s.dx), v_pca),
                                       vdupq_n_f32(s.dy), v_psa));
+        float32x4_t v_oy =
+            vaddq_f32(v_py, vmlsq_f32(vmulq_f32(vdupq_n_f32(s.dy), v_pca),
+                                      vdupq_n_f32(s.dx), v_psa));
 
         float32x4_t sw =
             calc_weight4(v_ox, v_oy, v_pca, v_psa, j, vdupq_n_f32(meas),
