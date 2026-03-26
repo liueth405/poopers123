@@ -657,8 +657,6 @@ private:
     const float32x4_t v_eps = vdupq_n_f32(1e-6f), v_mmin = vdupq_n_f32(MAP_MIN),
                       v_mmax = vdupq_n_f32(MAP_MAX), v_zero = vdupq_n_f32(0.0f);
 
-    const float32x4_t v_fric = vdupq_n_f32(std::max(0.0f, 1.0f - lateral_viscous_friction * dt));
-
     for (size_t i = 0; i < num_aligned; i += 4) {
       // get current x, y, theta, lateral velocity, cos(theta_particle), and
       // sin(theta_particle)
@@ -713,10 +711,12 @@ private:
       // v_fwd = dist / dt
       float32x4_t v_fwd = vmulq_f32(dist, fast_recip(v_dt));
 
-      // new v_y = (1 - alpha * delta_t) * v_y + delta_t * v_x * w
-      float32x4_t lv_centr = vmulq_f32(v_fwd, sf);
-      float32x4_t lv_fric = vmulq_f32(lv, v_fric);
-      float32x4_t lv_raw = vaddq_f32(lv_fric, lv_centr);
+      // vy_next = (vy - w * dt * v) / (1.0 + (fabs(w) + alpha_p) * dt)
+      // w * dt is equivalent to dh (which carries noise).
+      // fabs(w) * dt is fabs(dh). alpha_p is lateral_viscous_friction.
+      float32x4_t num = vsubq_f32(lv, vmulq_f32(v_fwd, dh));
+      float32x4_t den = vaddq_f32(v_one, vaddq_f32(vabsq_f32(dh), vdupq_n_f32(lateral_viscous_friction * dt)));
+      float32x4_t lv_raw = vmulq_f32(num, fast_recip(den));
       
       // lv_new = (lv * cf) + (v_fwd * sf) - (lv * k_fric * dt)
       // float32x4_t lv_rot = vaddq_f32(vmulq_f32(lv, cf), vmulq_f32(v_fwd, sf));
