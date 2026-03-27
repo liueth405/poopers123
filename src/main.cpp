@@ -8,7 +8,7 @@
  * When this callback is fired, it will toggle line 2 of the LCD text between
  * "I was pressed!" and nothing.
  */
-void on_center_button() {
+void on_center_button() {  
 	static bool pressed = false;
 	pressed = !pressed;
 	if (pressed) {
@@ -90,7 +90,7 @@ void opcontrol() {
     };
     std::vector<SensorConfig> sc = {
         {0.0, 0.0, 0.0},    // Forward
-        {0.0, 0.0, 90.0}    // Right
+        {0.0, 0.0, 90.0}    // Right 
     };
     
     ParticleFilter pf(500, sc, 40.0, 40.0, 45.0f * DEG_TO_RAD, 2.0, 0.01);
