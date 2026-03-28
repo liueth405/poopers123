@@ -34,6 +34,16 @@ struct SensorConfig {
   float dx, dy, angle;
 };
 
+struct PFConfig {
+  float distance_sensor_stddev = 0.83f;
+  float motion_distance_stddev = 0.45f;
+  float lateral_viscous_friction = 0.5f;
+  float motion_heading_stddev = 0.01f;
+  float uniform_noise_probability = 1.0f / 78.74016f;
+  float random_particle_probability = 0.005f;
+  float resampling_threshold = 0.01f;
+};
+
 struct Sensor {
   float dx, dy;
   float angle;
@@ -421,14 +431,7 @@ class ParticleFilter {
   float div_step = div_angle / 7.0f;
   float sigma_sq = (div_angle * 0.5f) * (div_angle * 0.5f);
 
-
-  // tune these !!! except for max_range_threshold
-  float distance_sensor_stddev = 0.83f;
-  float motion_distance_stddev = 0.45f;
-  float lateral_viscous_friction = 0.5f;
-  float motion_heading_stddev = 0.01f;
-  float uniform_noise_probability = 1.0f / 78.74016f;
-  float resampling_threshold;
+  PFConfig cfg;
 
   float max_range = 78.74016f;
   float max_range_threshold = 77.5f;
@@ -441,10 +444,10 @@ class ParticleFilter {
   }
 
 public:
-  ParticleFilter(size_t n, const std::vector<SensorConfig> &sc, float start_x,
-                 float start_y, float theta, float start_spread = 2.0f,
-                 float resampling_threshold_ = 0.01f)
-      : num_particles(n), resampling_threshold(resampling_threshold_) {
+  ParticleFilter(size_t n, const std::vector<SensorConfig> &sc,
+                 const PFConfig &pf_cfg, float start_x, float start_y,
+                 float theta, float start_spread = 2.0f)
+      : num_particles(n), cfg(pf_cfg) {
     num_aligned = (n + 3u) & ~3u;
     size_t total_floats = 17 * num_aligned;
     size_t total_bytes = total_floats * sizeof(float) + 64;
@@ -549,7 +552,7 @@ public:
     // mathematics here, we save the NEON processing pipeline from evaluating
     // `fast_exp_neon` thousands of times inside the inner particle evaluation
     // loop.
-    float32x4_t v_inv_sigma = vdupq_n_f32(1.0f / distance_sensor_stddev);
+    float32x4_t v_inv_sigma = vdupq_n_f32(1.0f / cfg.distance_sensor_stddev);
     float32x4_t v_exp_sho_arr[16];
     for (size_t j = 0; j < sensors.size() && j < 16; ++j) {
       v_exp_sho_arr[j] = vdupq_n_f32(std::exp(-phi * readings[j]));
@@ -608,7 +611,7 @@ public:
       }
     }
 
-    if (accumulated_distance < resampling_threshold)
+    if (accumulated_distance < cfg.resampling_threshold)
       return;
     accumulated_distance = 0.0f;
     resample();
@@ -646,10 +649,10 @@ private:
       noise_d[i] = noise_h[i] = 0.0f;
 
     const float32x4_t v_db = vdupq_n_f32(distBase),
-                      v_ms = vdupq_n_f32(motion_distance_stddev);
+                      v_ms = vdupq_n_f32(cfg.motion_distance_stddev);
 
     const float32x4_t v_cdh = vdupq_n_f32(common_dh),
-                      v_hs = vdupq_n_f32(motion_heading_stddev);
+                      v_hs = vdupq_n_f32(cfg.motion_heading_stddev);
 
     const float32x4_t v_dt = vdupq_n_f32(dt), v_half = vdupq_n_f32(0.5f),
                       v_two = vdupq_n_f32(2.0f), v_one = vdupq_n_f32(1.0f);
@@ -715,12 +718,15 @@ private:
       // w * dt is equivalent to dh (which carries noise).
       // fabs(w) * dt is fabs(dh). alpha_p is lateral_viscous_friction.
       float32x4_t num = vsubq_f32(lv, vmulq_f32(v_fwd, dh));
-      float32x4_t den = vaddq_f32(v_one, vaddq_f32(vabsq_f32(dh), vdupq_n_f32(lateral_viscous_friction * dt)));
+      float32x4_t den = vaddq_f32(
+          v_one, vaddq_f32(vabsq_f32(dh),
+                           vdupq_n_f32(cfg.lateral_viscous_friction * dt)));
       float32x4_t lv_raw = vmulq_f32(num, fast_recip(den));
-      
+
       // lv_new = (lv * cf) + (v_fwd * sf) - (lv * k_fric * dt)
-      // float32x4_t lv_rot = vaddq_f32(vmulq_f32(lv, cf), vmulq_f32(v_fwd, sf));
-      //float32x4_t lv_fric =
+      // float32x4_t lv_rot = vaddq_f32(vmulq_f32(lv, cf), vmulq_f32(v_fwd,
+      // sf));
+      // float32x4_t lv_fric =
       //    vmulq_f32(lv, vdupq_n_f32(lateral_viscous_friction * dt));
       // float32x4_t lv_raw = vsubq_f32(lv_rot, lv_fric);
 
@@ -731,9 +737,8 @@ private:
 
       // add existing slip (lv) to kinematics. d = (v + v0) / 2 * t
       float32x4_t deltaX =
-         vaddq_f32(deltaX_kinematic,
-                   vmulq_f32(vmulq_f32(v_half, vaddq_f32(lv, lv_new)), v_dt));
-
+          vaddq_f32(deltaX_kinematic,
+                    vmulq_f32(vmulq_f32(v_half, vaddq_f32(lv, lv_new)), v_dt));
 
       // update the particle's position in field frame (compass convention: +y
       // north, +x east, 0=north, cw+)
@@ -813,10 +818,11 @@ private:
     // the peak of the Gaussian weight at the center is exactly 1.0f
     float32x4_t d0 = vminq_f32(hit0.distance, vdupq_n_f32(max_range));
     float32x4_t cos_alpha0 = vabsq_f32(vaddq_f32(
-          vmulq_f32(hit0.normal_x, v_rx0), vmulq_f32(hit0.normal_y, v_ry0)));
-    
+        vmulq_f32(hit0.normal_x, v_rx0), vmulq_f32(hit0.normal_y, v_ry0)));
+
     // set the best variables with the center ray before checking the rest
-    float32x4_t v_max_power = vmulq_f32(cos_alpha0, fast_recip(vmulq_f32(d0, d0)));
+    float32x4_t v_max_power =
+        vmulq_f32(cos_alpha0, fast_recip(vmulq_f32(d0, d0)));
     float32x4_t v_best_dist = d0;
 
     // determine dynamic mode: 24 deg if < 8 inches (mode 0), else 36 deg
@@ -881,12 +887,12 @@ private:
     uint32x4_t m_range = vcleq_f32(v_dist, vdupq_n_f32(max_range_threshold));
     // w_hit = uniform_noise_probability * random_particle_probability *
     // alpha_hit * (1 / (sqrt(2pi) * stddev)) * exp_gauss
-    float32x4_t w_hit =
-        vmlaq_f32(vmulq_n_f32(vdupq_n_f32(uniform_noise_probability),
-                              random_particle_probability),
-                  vmulq_f32(v_alpha_hit,
-                            vdupq_n_f32(INV_SQRT_2PI / distance_sensor_stddev)),
-                  v_exp_gauss);
+    float32x4_t w_hit = vmlaq_f32(
+        vmulq_n_f32(vdupq_n_f32(cfg.uniform_noise_probability),
+                    cfg.random_particle_probability),
+        vmulq_f32(v_alpha_hit,
+                  vdupq_n_f32(INV_SQRT_2PI / cfg.distance_sensor_stddev)),
+        v_exp_gauss);
 
     //
     v_weight = vbslq_f32(m_range, w_hit, v_weight);
