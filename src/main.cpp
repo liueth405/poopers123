@@ -1,11 +1,11 @@
 #include "main.h"
 #include "chassis.hpp"
-#include <hpipm_common.h>
 #include "liblvgl/lvgl.h"
 #include "motions/motion.hpp"
 #include "motions/sysid.hpp"
 #include "mpcc/acados_solver_mpcc.h"
 #include "odom/odom.hpp"
+#include <hpipm_common.h>
 #include <vector>
 
 // --- Configuration ---
@@ -34,7 +34,7 @@ std::vector<SensorConfig> sc = {};
 
 PFConfig pfc = {.distance_sensor_stddev = 0.83f,
                 .motion_distance_stddev = 0.001f,
-                .kinetic_friction = 90.0f,
+                .kinetic_friction = 100.0f,
                 .max_drift_speed = 41.0f,
                 .motion_heading_stddev = 0.001f,
                 .uniform_noise_probability = 1.0f / 78.74016f,
@@ -108,7 +108,7 @@ void initialize() {
   });
 
   chassis.set_stsmc_gains({.Lambda = {1.0, 1.0}, // Lower sensitivity to noise
-                           .K1 = {2.0, 2},     // Soften the twist
+                           .K1 = {2.0, 2},       // Soften the twist
                            .K2 = {1.5, 1.5},     // Stable integral action
                            .s_eps = 0.5,         // Wider smoothing window
                            .z_max = {12, 12},    // Standard voltage range
@@ -189,34 +189,34 @@ void autonomous() {
   target1.y = 24.0;
   target1.linear_pid = linear_pid;
   target1.steering_gain = 5;
-  target1.max_v = 50.0; // 50 in/s
+  target1.max_v = 80.0; // 50 in/s
   target1.slew = 2.0;   // 2 in/s per 10ms (200 in/s^2)
   target1.exit_turn_dist = 7;
 
   motions.moveTo(target1);
-  motions.waitUntilPoint(24, 24, 5);
+  motions.waitUntilPoint(24, 24, 1);
+  pros::delay(1000);
   motions.cancelMotion();
 
   // 2. Turn to face a point
-  // motions.turnToPoint(0, 0, TurnTarget::Direction::NEAREST, angular_pid,
-  // 360.0,
-  //                     8.0); // max 360 deg/s, slew 8 deg/s per tick
-  // motions.waitUntilAngularVelocity(1.0, false);
+  motions.turnToPoint(0, 5, TurnTarget::Direction::NEAREST, angular_pid, 360.0,
+                      8.0); // max 360 deg/s, slew 8 deg/s per tick
+  motions.waitUntilAngularVelocity(1.0, false);
 
-  // // 3. Move back to origin
-  // PointTarget origin;
-  // origin.x = 0;
-  // origin.y = 0;
-  // origin.linear_pid = linear_pid;
-  // origin.steering_gain = 1.5;
-  // origin.exit_turn_dist = 4.0;
-  // origin.max_v = 50.0;
-  // origin.reversed = true;
+  // 3. Move back to origin
+  PointTarget origin;
+  origin.x = 0;
+  origin.y = 24;
+  origin.linear_pid = linear_pid;
+  origin.steering_gain = 1.5;
+  origin.exit_turn_dist = 4.0;
+  origin.max_v = 50.0;
+  origin.reversed = true;
 
-  // motions.moveTo(origin);
-  // motions.waitUntilPoint(0, 0, 1.0);
+  motions.moveTo(origin);
+  motions.waitUntilPoint(0, 24, 1.0);
 
-  // motions.cancelMotion();
+  motions.cancelMotion();
 }
 
 /**
@@ -241,7 +241,6 @@ void opcontrol() {
   // }
 
   motions.cancelMotion();
-  
 
   // run_linear_sysid(chassis);
   // run_angular_sysid(chassis);
