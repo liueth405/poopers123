@@ -16,10 +16,10 @@ enum class MotionState { IDLE, DRIVING, TURNING, SETTLING };
  */
 struct PointTarget {
   double x, y;
-  double max_v = 12000, min_v = 0, slew = 500;
+  double max_v = 50.0, min_v = 2.0, slew = 1.0; // max_v in in/s, slew in in/s per tick
   bool reversed = false;
   PIDCoeffs linear_pid;
-  PIDCoeffs angular_pid;
+  double steering_gain = 1.5;
   double tolerance = 1.0; // inches
   double exit_turn_dist =
       4.0; // inches to target where we stop updating curvature
@@ -32,7 +32,7 @@ struct PointTarget {
 struct TurnTarget {
   double target_theta;
   enum class Direction { LEFT, RIGHT, NEAREST } direction = Direction::NEAREST;
-  double max_v = 12000, min_v = 0, slew = 500;
+  double max_v = 300.0, min_v = 5.0, slew = 6.0; // max_v in deg/s, slew in deg/s per tick
   PIDCoeffs angular_pid;
   double tolerance = 1.0; // degrees
   double integral_limit = 0;
@@ -66,8 +66,8 @@ public:
    * @brief Turn to face a specific coordinate.
    */
   void turnToPoint(double x, double y, TurnTarget::Direction dir,
-                   PIDCoeffs angular_pid, double max_v = 12000,
-                   double slew = 500, double integral_limit = 0);
+                   PIDCoeffs angular_pid, double max_v = 300.0,
+                   double slew = 6.0, double integral_limit = 0);
 
   /**
    * @brief Stop current motion and clear targets.

@@ -17,6 +17,13 @@ WARNFLAGS+=
 EXTRA_CFLAGS=
 EXTRA_CXXFLAGS=
 
+# Add third-party include directories to the search path
+# This allows using <blasfeo_target.h> instead of "blasfeo/blasfeo_target.h"
+# and is required for third-party headers that use angle brackets to find each other.
+THIRD_PARTY_INCLUDES = -I$(INCDIR)/blasfeo -I$(INCDIR)/hpipm/include -I$(INCDIR)/acados -I$(INCDIR)/acados_c -I$(INCDIR)/mpcc
+EXTRA_CFLAGS += $(THIRD_PARTY_INCLUDES)
+EXTRA_CXXFLAGS += $(THIRD_PARTY_INCLUDES)
+
 # Set to 1 to enable hot/cold linking
 USE_PACKAGE:=1
 

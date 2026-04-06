@@ -195,8 +195,11 @@ if __name__ == "__main__":
     #origin = (39.825, 39.9232)
     #heading = 90 - 44.7
     heading = 90
-    # 560
-    sim = LidarSimulator(divergence_deg=36.0, num_rays=8)
+    # Simulate dynamic mode: 36 deg if near (<= 8in / 0.2032m), else 24 deg
+    # Note: 8 inches is roughly 0.203 meters
+    dist_to_wall = np.sqrt(origin[0]**2 + origin[1]**2) # Heuristic for manual test
+    mode_div = 36.0 if dist_to_wall <= 0.2032 else 24.0
+    sim = LidarSimulator(divergence_deg=mode_div, num_rays=8)
     
-    print(f"Simulating beam hitting a corner from {origin} at {heading} degrees...")
+    print(f"Simulating beam ({mode_div} deg) hitting a corner from {origin} at {heading} degrees...")
     plot_simulation(origin, heading, walls, sim)

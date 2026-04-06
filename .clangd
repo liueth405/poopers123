@@ -1,17 +1,2 @@
 CompileFlags:
-  Add:
-    - "-Wno-unknown-warning-option"
-    - "-Wno-unused-command-line-argument"
-    - "--target=arm-none-eabi"
-    - "-mfpu=neon-fp16"
-    - "-mfloat-abi=hard"
-    - "-mcpu=cortex-a9"
   CompilationDatabase: .
-  QueryDriver:
-    - C:/Users/Ethan/AppData/Roaming/Code/User/globalStorage/sigbots.pros/install/pros-toolchain-windows/usr/bin/arm-none-eabi-*
-
-Diagnostics:
-  Suppress:
-    - drv_unsupported_opt
-    - unknown_argument
-    - fatal_error_too_many_errors

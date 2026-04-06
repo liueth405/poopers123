@@ -1,5 +1,4 @@
 #include "motions/motion.hpp"
-#include <iostream>
 
 MotionManager::MotionManager(Chassis &chassis, ParticleFilter &pf)
     : chassis(chassis), pf(pf) {}
@@ -9,8 +8,6 @@ void MotionManager::moveTo(PointTarget target) {
   current_point = target;
   linear_controller = PID(target.linear_pid);
   linear_controller.set_integral_limit(target.integral_limit);
-  angular_controller = PID(target.angular_pid);
-  angular_controller.set_integral_limit(target.integral_limit);
   v_slew.limit = target.slew;
   v_slew.reset(0);
   state = MotionState::DRIVING;
@@ -105,8 +102,7 @@ void MotionManager::waitUntilLinearVelocity(double velocity, bool greaterThan) {
 
 void MotionManager::waitUntilAngularVelocity(double omega, bool greaterThan) {
   while (!isDone()) {
-    double current_w =
-        std::abs(chassis.get_right_velocity() - chassis.get_left_velocity());
+    double current_w = std::abs(chassis.get_angular_velocity());
     if (greaterThan ? (current_w >= omega) : (current_w <= omega))
       break;
     pros::delay(10);
@@ -138,7 +134,7 @@ void MotionManager::loop() {
     Estimate est = pf.estimate();
 
     if (state == MotionState::IDLE) {
-      chassis.tank(0, 0);
+      chassis.velocity_control(0.0, 0.0, 0.01);
     } else if (state == MotionState::DRIVING) {
       double dx = current_point.x - est.x;
       double dy = current_point.y - est.y;
@@ -155,28 +151,34 @@ void MotionManager::loop() {
         }
 
         double error_rad = angle_error * DEG_TO_RAD;
-        double cos_error = std::cos(error_rad);
-        double dist_eff = dist * cos_error;
 
         double K = 0;
         if (dist > current_point.exit_turn_dist) {
-          K = (2.0 * std::sin(error_rad)) / dist;
+          // Clamp distance to 2 inches for the divisor to prevent steering explosion near target
+          K = (2.0 * std::sin(error_rad)) / std::max(dist, 2.0);
         }
 
-        double v_req = linear_controller.update(dist_eff, 0);
+        double v_req = linear_controller.update(dist, 0);
         v_req = std::clamp(v_req, -current_point.max_v, current_point.max_v);
         if (std::abs(v_req) < current_point.min_v)
           v_req = (v_req > 0 ? 1 : -1) * current_point.min_v;
 
-        double v_slewed = v_slew.update(v_req);
+        double v_slewed;
+        if (std::abs(v_req) > std::abs(v_slew.current))
+          v_slewed = v_slew.update(v_req);
+        else
+          v_slewed = v_slew.current = v_req;
+
         if (current_point.reversed)
           v_slewed *= -1;
 
-        double w = v_slewed * K * 10.0;
+        // Use absolute velocity for steering magnitude so the sign 
+        // is determined solely by the (already adjusted) angle error.
+        double w = std::abs(v_slewed) * K * current_point.steering_gain; // natural unit: rad/s
 
-        double left = v_slewed - w;
-        double right = v_slewed + w;
-        chassis.tank(left, right);
+        // Cascade PID: Pass target velocities to the inner STSMC loop
+        double v_ms = v_slewed * 0.0254; // Convert in/s to m/s
+        chassis.velocity_control(v_ms, w, 0.01);
       }
     } else if (state == MotionState::TURNING) {
       double angle_error =
@@ -185,12 +187,16 @@ void MotionManager::loop() {
       if (std::abs(angle_error) < current_turn.tolerance) {
         state = MotionState::IDLE;
       } else {
-        if (current_turn.direction == TurnTarget::Direction::LEFT &&
-            angle_error > 0) {
-          angle_error -= 360;
-        } else if (current_turn.direction == TurnTarget::Direction::RIGHT &&
-                   angle_error < 0) {
-          angle_error += 360;
+        // Only force direction if we are far away. 
+        // When close (< 15 deg), always use shortest path to correct settlement.
+        if (std::abs(angle_error) > 15.0) {
+          if (current_turn.direction == TurnTarget::Direction::LEFT && 
+              angle_error > 0) {
+            angle_error -= 360;
+          } else if (current_turn.direction == TurnTarget::Direction::RIGHT && 
+                     angle_error < 0) {
+            angle_error += 360;
+          }
         }
 
         double w_req = angular_controller.update(angle_error, 0);
@@ -198,8 +204,15 @@ void MotionManager::loop() {
         if (std::abs(w_req) < current_turn.min_v)
           w_req = (w_req > 0 ? 1 : -1) * current_turn.min_v;
 
-        double w_slewed = w_slew.update(w_req);
-        chassis.tank(-w_slewed, w_slewed);
+        double w_slewed;
+        if (std::abs(w_req) > std::abs(w_slew.current))
+          w_slewed = w_slew.update(w_req);
+        else
+          w_slewed = w_slew.current = w_req;
+          
+        // Cascade PID: Convert deg/s to rad/s and pass to STSMC
+        double w_rads = w_slewed * DEG_TO_RAD;
+        chassis.velocity_control(0.0, w_rads, 0.01);
       }
     }
 

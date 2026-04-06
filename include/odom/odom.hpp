@@ -37,7 +37,8 @@ struct SensorConfig {
 struct PFConfig {
   float distance_sensor_stddev = 0.83f;
   float motion_distance_stddev = 0.45f;
-  float lateral_viscous_friction = 0.5f;
+  float kinetic_friction = 0.5f; // Constant friction (f_k) instead of viscous
+  float max_drift_speed = 0.1f; // maximum lateral velocity constraint
   float motion_heading_stddev = 0.01f;
   float uniform_noise_probability = 1.0f / 78.74016f;
   float random_particle_probability = 0.005f;
@@ -637,7 +638,7 @@ public:
 private:
   void predict(float compass_heading, float prev_heading, float vl, float vr,
                float dt) {
-    const float distBase = (vr + vl) * 0.5f;
+    const float distBase = (vr + vl) * 0.5f * dt;
     const float common_dh = compass_heading - prev_heading;
     accumulated_distance += std::abs(distBase);
 
@@ -714,26 +715,48 @@ private:
       // v_fwd = dist / dt
       float32x4_t v_fwd = vmulq_f32(dist, fast_recip(v_dt));
 
-      // vy_next = (vy - w * dt * v) / (1.0 + (fabs(w) + alpha_p) * dt)
-      // w * dt is equivalent to dh (which carries noise).
-      // fabs(w) * dt is fabs(dh). alpha_p is lateral_viscous_friction.
-      float32x4_t num = vsubq_f32(lv, vmulq_f32(v_fwd, dh));
-      float32x4_t den = vaddq_f32(
-          v_one, vaddq_f32(vabsq_f32(dh),
-                           vdupq_n_f32(cfg.lateral_viscous_friction * dt)));
-      float32x4_t lv_raw = vmulq_f32(num, fast_recip(den));
+      // Calculate friction application: f_k * dt (needed for kick clamp too)
+      float32x4_t f_k_dt = vmulq_f32(vdupq_n_f32(cfg.kinetic_friction), v_dt);
 
-      // lv_new = (lv * cf) + (v_fwd * sf) - (lv * k_fric * dt)
-      // float32x4_t lv_rot = vaddq_f32(vmulq_f32(lv, cf), vmulq_f32(v_fwd,
-      // sf));
-      // float32x4_t lv_fric =
-      //    vmulq_f32(lv, vdupq_n_f32(lateral_viscous_friction * dt));
-      // float32x4_t lv_raw = vsubq_f32(lv_rot, lv_fric);
+      // vy_next = vy - clamp(vx * w * dt, -f_k_dt, f_k_dt) - sgn(vy) * f_k_dt
+      // Clamp the centripetal kick so it can't exceed friction per frame.
+      // This prevents runaway accumulation: drift builds up gradually to a
+      // physical terminal velocity rather than going supersonic immediately.
+      float32x4_t raw_kick = vmulq_f32(v_fwd, dh);
+      float32x4_t kick_mag = vabsq_f32(raw_kick);
+      float32x4_t kick_clamped = vminq_f32(kick_mag, f_k_dt);
+      uint32x4_t kick_neg = vcltq_f32(raw_kick, v_zero);
+      float32x4_t centrip_kick = vbslq_f32(kick_neg, vnegq_f32(kick_clamped), kick_clamped);
+      float32x4_t v_pre_fric = vsubq_f32(lv, centrip_kick);
 
-      // deadband: if lateral velocity < 0.2 inches/s, snap to zero.
+      // Apply kinetic friction: reduce magnitude towards zero by f_k_dt
+      float32x4_t v_abs_pre = vabsq_f32(v_pre_fric);
+      float32x4_t v_reduced = vsubq_f32(v_abs_pre, f_k_dt);
+      float32x4_t v_clipped = vmaxq_f32(v_zero, v_reduced);
+
+      // Restore sign to the friction-clamped velocity
+      uint32x4_t v_is_neg = vcltq_f32(v_pre_fric, v_zero);
+      float32x4_t lv_raw = vbslq_f32(v_is_neg, vnegq_f32(v_clipped), v_clipped);
+
+      // physical stability: lateral drift cannot exceed total forward speed magnitude.
+      // (An omni-wheel robot skating sideways at 45 degrees has |vy| == |vx|).
+      float32x4_t max_vy_mag = vabsq_f32(v_fwd);
+      float32x4_t lv_mag = vabsq_f32(lv_raw);
+      uint32x4_t is_too_fast = vcgtq_f32(lv_mag, max_vy_mag);
+      
+      // If it's too fast, clamp lv_raw to +/- max_vy_mag
+      float32x4_t lv_clamped = vbslq_f32(v_is_neg, vnegq_f32(max_vy_mag), max_vy_mag);
+      float32x4_t lv_final = vbslq_f32(is_too_fast, lv_clamped, lv_raw);
+
+      // final deadband snap
       const float32x4_t v_threshold = vdupq_n_f32(0.2f);
-      uint32x4_t small_lv = vcltq_f32(vabsq_f32(lv_raw), v_threshold);
-      float32x4_t lv_new = vbslq_f32(small_lv, v_zero, lv_raw);
+      uint32x4_t small_lv = vcltq_f32(vabsq_f32(lv_final), v_threshold);
+      float32x4_t lv_new = vbslq_f32(small_lv, v_zero, lv_final);
+
+      // final global safety clamp
+      const float32x4_t v_max_drift = vdupq_n_f32(cfg.max_drift_speed);
+      lv_new = vminq_f32(vmaxq_f32(lv_new, vnegq_f32(v_max_drift)), v_max_drift);
+      // lv_new = vbslq_f32(lv_too_big, v_fwd, lv_new);
 
       // add existing slip (lv) to kinematics. d = (v + v0) / 2 * t
       float32x4_t deltaX =
@@ -832,13 +855,13 @@ private:
 
     // ray bundle (8 rays)
     for (int r = 0; r < 8; ++r) {
-      // Pick pre-computed orientations based on proximity mode
-      float32x4_t v_cm = vbslq_f32(is_near, vdupq_n_f32(s.ray_cos[0][r]),
-                                   vdupq_n_f32(s.ray_cos[1][r]));
-      float32x4_t v_sm = vbslq_f32(is_near, vdupq_n_f32(s.ray_sin[0][r]),
-                                   vdupq_n_f32(s.ray_sin[1][r]));
-      float32x4_t v_weight = vbslq_f32(is_near, vdupq_n_f32(s.ray_w[0][r]),
-                                       vdupq_n_f32(s.ray_w[1][r]));
+      // Swapped: mode 1 (36 deg) if near, mode 0 (24 deg) if far
+      float32x4_t v_cm = vbslq_f32(is_near, vdupq_n_f32(s.ray_cos[1][r]),
+                                   vdupq_n_f32(s.ray_cos[0][r]));
+      float32x4_t v_sm = vbslq_f32(is_near, vdupq_n_f32(s.ray_sin[1][r]),
+                                   vdupq_n_f32(s.ray_sin[0][r]));
+      float32x4_t v_weight = vbslq_f32(is_near, vdupq_n_f32(s.ray_w[1][r]),
+                                       vdupq_n_f32(s.ray_w[0][r]));
 
       // convert compass orientation to standard math vector
       float32x4_t v_rx = vmlaq_f32(vmulq_f32(v_psa, v_cm), v_pca, v_sm);
