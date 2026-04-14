@@ -56,9 +56,16 @@ ELF_DEPS = $(sort $(foreach cext,$(CEXTS),$(call rwildcard,$(SRCDIR),*.$(cext)))
             $(foreach cxxext,$(CXXEXTS),$(call rwildcard,$(SRCDIR),*.$(cxxext))))
 ELF_DEPS := $(addprefix $(BINDIR)/,$(patsubst $(SRCDIR)/%,%.o,$(ELF_DEPS)))
 
-# Rule for Cold Library Objects (everything in src/ except main, plus cold_src)
+# Rule for Cold Library Objects (everything in src/ except main and MPCC related, plus cold_src)
 # First get standard src/ objects using standard PROS wildcards:
-LIB_OBJS = $(filter-out $(BINDIR)/main.cpp.o, $(ELF_DEPS))
+# We EXCLUDE the files we are actively tuning to keep them in the HOT package for fast uploads.
+HOT_FILES = $(BINDIR)/main.cpp.o \
+            $(BINDIR)/motions/motion.cpp.o \
+            $(BINDIR)/motions/mpcc_controller.cpp.o \
+            $(BINDIR)/motions/mpcc_sd_log.cpp.o \
+            $(BINDIR)/motions/pathplanner.cpp.o
+
+LIB_OBJS = $(filter-out $(HOT_FILES), $(ELF_DEPS))
 # Add our custom cold code explicitly:
 LIB_OBJS += $(BINDIR)/cold_math.cpp.o
 

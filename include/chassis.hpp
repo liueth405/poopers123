@@ -2,6 +2,7 @@
 
 #include "api.h"
 #include "blasfeo/blasfeo.h"
+#include <cstdint>
 
 class SystemIdentification;
 #include <cmath>
@@ -43,6 +44,14 @@ struct Vec2 {
   const double &operator()(int i) const { return data[i]; }
   static Vec2 Zero() { return {0, 0}; }
 };
+
+extern "C" {
+  typedef void *V5_DeviceT;
+
+  V5_DeviceT vexDeviceGetByIndex(uint32_t index); // device by index
+  uint32_t vexDeviceGetTimestamp(V5_DeviceT device); // last update time
+  int32_t vexDeviceDistanceDistanceGet(V5_DeviceT device); // distance (mm)
+}
 
 /**
  * @brief Parameters defining the motor's physical properties.
@@ -175,10 +184,11 @@ private:
   std::vector<std::unique_ptr<pros::v5::Motor>> left_motors;
   std::vector<std::unique_ptr<pros::v5::Motor>> right_motors;
   std::vector<std::unique_ptr<pros::v5::Imu>> imus;
-  std::vector<std::unique_ptr<pros::v5::Distance>> distances;
+  std::vector<std::unique_ptr<V5_DeviceT>> distances;
 
   std::vector<MotorData> left_data;
   std::vector<MotorData> right_data;
+  std::vector<uint32_t> last_times_distance;
   std::vector<double> last_distances;
 
   EKFConfig ekf_config_;

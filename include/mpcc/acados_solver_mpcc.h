@@ -39,7 +39,7 @@
 #define MPCC_NX     5
 #define MPCC_NZ     0
 #define MPCC_NU     3
-#define MPCC_NP     12
+#define MPCC_NP     77
 #define MPCC_NP_GLOBAL     0
 #define MPCC_NBX    0
 #define MPCC_NBX0   5
@@ -61,9 +61,9 @@
 #define MPCC_NG     0
 #define MPCC_NBXN   0
 #define MPCC_NGN    0
-#define MPCC_NY0    9
-#define MPCC_NY     9
-#define MPCC_NYN    4
+#define MPCC_NY0    0
+#define MPCC_NY     0
+#define MPCC_NYN    0
 #define MPCC_N      25
 #define MPCC_NH     0
 #define MPCC_NHN    0
@@ -106,18 +106,25 @@ typedef struct mpcc_solver_capsule
 
     // cost
 
-    external_function_external_param_casadi *cost_y_fun;
-    external_function_external_param_casadi *cost_y_fun_jac_ut_xt;
+    external_function_external_param_casadi *ext_cost_fun;
+    external_function_external_param_casadi *ext_cost_fun_jac;
+    external_function_external_param_casadi *ext_cost_fun_jac_hess;
 
 
 
-    external_function_external_param_casadi cost_y_0_fun;
-    external_function_external_param_casadi cost_y_0_fun_jac_ut_xt;
+
+
+    external_function_external_param_casadi ext_cost_0_fun;
+    external_function_external_param_casadi ext_cost_0_fun_jac;
+    external_function_external_param_casadi ext_cost_0_fun_jac_hess;
 
 
 
-    external_function_external_param_casadi cost_y_e_fun;
-    external_function_external_param_casadi cost_y_e_fun_jac_ut_xt;
+
+    external_function_external_param_casadi ext_cost_e_fun;
+    external_function_external_param_casadi ext_cost_e_fun_jac;
+    external_function_external_param_casadi ext_cost_e_fun_jac_hess;
+
 
 
     // constraints

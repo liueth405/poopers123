@@ -39,55 +39,86 @@ extern "C" {
 
 // Cost at initial shooting node
 
-int mpcc_cost_y_0_fun(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
-int mpcc_cost_y_0_fun_work(int *, int *, int *, int *);
-const int *mpcc_cost_y_0_fun_sparsity_in(int);
-const int *mpcc_cost_y_0_fun_sparsity_out(int);
-int mpcc_cost_y_0_fun_n_in(void);
-int mpcc_cost_y_0_fun_n_out(void);
+int mpcc_cost_ext_cost_0_fun(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
+int mpcc_cost_ext_cost_0_fun_work(int *, int *, int *, int *);
+const int *mpcc_cost_ext_cost_0_fun_sparsity_in(int);
+const int *mpcc_cost_ext_cost_0_fun_sparsity_out(int);
+int mpcc_cost_ext_cost_0_fun_n_in(void);
+int mpcc_cost_ext_cost_0_fun_n_out(void);
 
-int mpcc_cost_y_0_fun_jac_ut_xt(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
-int mpcc_cost_y_0_fun_jac_ut_xt_work(int *, int *, int *, int *);
-const int *mpcc_cost_y_0_fun_jac_ut_xt_sparsity_in(int);
-const int *mpcc_cost_y_0_fun_jac_ut_xt_sparsity_out(int);
-int mpcc_cost_y_0_fun_jac_ut_xt_n_in(void);
-int mpcc_cost_y_0_fun_jac_ut_xt_n_out(void);
+int mpcc_cost_ext_cost_0_fun_jac_hess(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
+int mpcc_cost_ext_cost_0_fun_jac_hess_work(int *, int *, int *, int *);
+const int *mpcc_cost_ext_cost_0_fun_jac_hess_sparsity_in(int);
+const int *mpcc_cost_ext_cost_0_fun_jac_hess_sparsity_out(int);
+int mpcc_cost_ext_cost_0_fun_jac_hess_n_in(void);
+int mpcc_cost_ext_cost_0_fun_jac_hess_n_out(void);
+
+int mpcc_cost_ext_cost_0_fun_jac(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
+int mpcc_cost_ext_cost_0_fun_jac_work(int *, int *, int *, int *);
+const int *mpcc_cost_ext_cost_0_fun_jac_sparsity_in(int);
+const int *mpcc_cost_ext_cost_0_fun_jac_sparsity_out(int);
+int mpcc_cost_ext_cost_0_fun_jac_n_in(void);
+int mpcc_cost_ext_cost_0_fun_jac_n_out(void);
+
+
+
+
 
 
 
 // Cost at path shooting node
 
-int mpcc_cost_y_fun(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
-int mpcc_cost_y_fun_work(int *, int *, int *, int *);
-const int *mpcc_cost_y_fun_sparsity_in(int);
-const int *mpcc_cost_y_fun_sparsity_out(int);
-int mpcc_cost_y_fun_n_in(void);
-int mpcc_cost_y_fun_n_out(void);
+int mpcc_cost_ext_cost_fun(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
+int mpcc_cost_ext_cost_fun_work(int *, int *, int *, int *);
+const int *mpcc_cost_ext_cost_fun_sparsity_in(int);
+const int *mpcc_cost_ext_cost_fun_sparsity_out(int);
+int mpcc_cost_ext_cost_fun_n_in(void);
+int mpcc_cost_ext_cost_fun_n_out(void);
 
-int mpcc_cost_y_fun_jac_ut_xt(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
-int mpcc_cost_y_fun_jac_ut_xt_work(int *, int *, int *, int *);
-const int *mpcc_cost_y_fun_jac_ut_xt_sparsity_in(int);
-const int *mpcc_cost_y_fun_jac_ut_xt_sparsity_out(int);
-int mpcc_cost_y_fun_jac_ut_xt_n_in(void);
-int mpcc_cost_y_fun_jac_ut_xt_n_out(void);
+int mpcc_cost_ext_cost_fun_jac_hess(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
+int mpcc_cost_ext_cost_fun_jac_hess_work(int *, int *, int *, int *);
+const int *mpcc_cost_ext_cost_fun_jac_hess_sparsity_in(int);
+const int *mpcc_cost_ext_cost_fun_jac_hess_sparsity_out(int);
+int mpcc_cost_ext_cost_fun_jac_hess_n_in(void);
+int mpcc_cost_ext_cost_fun_jac_hess_n_out(void);
+
+int mpcc_cost_ext_cost_fun_jac(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
+int mpcc_cost_ext_cost_fun_jac_work(int *, int *, int *, int *);
+const int *mpcc_cost_ext_cost_fun_jac_sparsity_in(int);
+const int *mpcc_cost_ext_cost_fun_jac_sparsity_out(int);
+int mpcc_cost_ext_cost_fun_jac_n_in(void);
+int mpcc_cost_ext_cost_fun_jac_n_out(void);
+
+
+
 
 
 
 // Cost at terminal shooting node
 
-int mpcc_cost_y_e_fun(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
-int mpcc_cost_y_e_fun_work(int *, int *, int *, int *);
-const int *mpcc_cost_y_e_fun_sparsity_in(int);
-const int *mpcc_cost_y_e_fun_sparsity_out(int);
-int mpcc_cost_y_e_fun_n_in(void);
-int mpcc_cost_y_e_fun_n_out(void);
+int mpcc_cost_ext_cost_e_fun(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
+int mpcc_cost_ext_cost_e_fun_work(int *, int *, int *, int *);
+const int *mpcc_cost_ext_cost_e_fun_sparsity_in(int);
+const int *mpcc_cost_ext_cost_e_fun_sparsity_out(int);
+int mpcc_cost_ext_cost_e_fun_n_in(void);
+int mpcc_cost_ext_cost_e_fun_n_out(void);
 
-int mpcc_cost_y_e_fun_jac_ut_xt(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
-int mpcc_cost_y_e_fun_jac_ut_xt_work(int *, int *, int *, int *);
-const int *mpcc_cost_y_e_fun_jac_ut_xt_sparsity_in(int);
-const int *mpcc_cost_y_e_fun_jac_ut_xt_sparsity_out(int);
-int mpcc_cost_y_e_fun_jac_ut_xt_n_in(void);
-int mpcc_cost_y_e_fun_jac_ut_xt_n_out(void);
+int mpcc_cost_ext_cost_e_fun_jac_hess(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
+int mpcc_cost_ext_cost_e_fun_jac_hess_work(int *, int *, int *, int *);
+const int *mpcc_cost_ext_cost_e_fun_jac_hess_sparsity_in(int);
+const int *mpcc_cost_ext_cost_e_fun_jac_hess_sparsity_out(int);
+int mpcc_cost_ext_cost_e_fun_jac_hess_n_in(void);
+int mpcc_cost_ext_cost_e_fun_jac_hess_n_out(void);
+
+int mpcc_cost_ext_cost_e_fun_jac(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
+int mpcc_cost_ext_cost_e_fun_jac_work(int *, int *, int *, int *);
+const int *mpcc_cost_ext_cost_e_fun_jac_sparsity_in(int);
+const int *mpcc_cost_ext_cost_e_fun_jac_sparsity_out(int);
+int mpcc_cost_ext_cost_e_fun_jac_n_in(void);
+int mpcc_cost_ext_cost_e_fun_jac_n_out(void);
+
+
+
 
 
 

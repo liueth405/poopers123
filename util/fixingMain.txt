@@ -91,3 +91,7 @@ $(LIBAR): $(LIB_OBJS)
 	-$Dmkdir $(BINDIR)
 	-$Drm -f $@
 	$(call test_output_2,Creating $@ ,$(AR) rcs $@ $^, $(DONE_STRING))
+
+
+giventhe mpcc_time.csv logs, do you know why the mpc moves forward just a little bit and stays there instead of following the path ?
+

@@ -2,10 +2,11 @@
 #include "chassis.hpp"
 #include "liblvgl/lvgl.h"
 #include "motions/motion.hpp"
+#include "motions/mpcc_controller.hpp"
+#include "motions/pathplanner.hpp"
 #include "motions/sysid.hpp"
 #include "mpcc/acados_solver_mpcc.h"
 #include "odom/odom.hpp"
-#include <hpipm_common.h>
 #include <vector>
 
 // --- Configuration ---
@@ -26,7 +27,7 @@ Chassis chassis(LEFT_MOTOR_PORTS, RIGHT_MOTOR_PORTS, IMU_PORTS,
                     .R_v_enc = 0.000100,
                     .R_w_enc = 0.000100,
                     .R_w_imu = 0.000662,
-                    .slip_tolerance = 9.0,
+                    .slip_tolerance = 3.0,
                 });
 
 // Particle Filter setup
@@ -34,16 +35,20 @@ std::vector<SensorConfig> sc = {};
 
 PFConfig pfc = {.distance_sensor_stddev = 0.83f,
                 .motion_distance_stddev = 0.001f,
-                .kinetic_friction = 100.0f,
+                .kinetic_friction = 68.0315337,
                 .max_drift_speed = 41.0f,
                 .motion_heading_stddev = 0.001f,
                 .uniform_noise_probability = 1.0f / 78.74016f,
                 .random_particle_probability = 0.005f,
-                .resampling_threshold = 1.5f};
+                .resampling_threshold = 0.5f,
+                .max_time_before_resample = 0.05f};
 
-ParticleFilter pf(500, sc, pfc, 0, 0, 0); // Start at (0,0,0)
+ParticleFilter pf(500, sc, pfc, -36.2, 45.1, 0); 
 
-MotionManager motions(chassis, pf);
+MPCC_Controller mpcc_controller(
+    5.0, 0.05); 
+
+MotionManager motions(chassis, pf, mpcc_controller);
 
 // --- LVGL UI Objects ---
 lv_obj_t *status_label = nullptr;
@@ -57,7 +62,6 @@ lv_obj_t *r_vel_label = nullptr;
 pros::Task *motion_task = nullptr;
 lv_timer_t *ui_timer = nullptr;
 
-// LVGL Timer Callback for Thread-Safe Dashboard Updates
 void ui_timer_cb(lv_timer_t *timer) {
   Estimate est = pf.estimate();
   char buf[64];
@@ -107,11 +111,11 @@ void initialize() {
       .kS_w = 1.9308,
   });
 
-  chassis.set_stsmc_gains({.Lambda = {1.0, 1.0}, // Lower sensitivity to noise
-                           .K1 = {2.0, 2},       // Soften the twist
-                           .K2 = {1.5, 1.5},     // Stable integral action
-                           .s_eps = 0.5,         // Wider smoothing window
-                           .z_max = {12, 12},    // Standard voltage range
+  chassis.set_stsmc_gains({.Lambda = {1.0, 1.0}, 
+                           .K1 = {2.0, 2},       
+                           .K2 = {1.5, 1.5},     
+                           .s_eps = 0.5,         
+                           .z_max = {12, 12},    
                            .Imax_per_side = 5.0});
 
   // Set up the map for localization
@@ -120,6 +124,8 @@ void initialize() {
                                   {70.5, 70.5, -70.5, 70.5},
                                   {-70.5, 70.5, -70.5, -70.5}};
   pf.set_map(segs);
+
+  mpcc_controller.setFrictionCoefficient(5.0);
 
   // Start the unified Odom + Motion task
   motion_task = new pros::Task(motion_task_fn, &motions, "Motion Task");
@@ -172,10 +178,9 @@ void initialize() {
  * Runs the user autonomous code.
  */
 void autonomous() {
-  // Outer-Loop Cascade PIDs (output target velocity)
-  PIDCoeffs linear_pid = {4.0, 0, 0.5}; // P=4 (10in error -> 40 in/s target)
+  PIDCoeffs linear_pid = {4.0, 0, 0.5};
   PIDCoeffs angular_pid = {4.0, 0,
-                           0.5}; // P=4 (30deg error -> 120 deg/s target)
+                           0.5};
 
   lv_lock();
   if (status_label) {
@@ -184,39 +189,93 @@ void autonomous() {
   lv_unlock();
 
   // 1. Move to a point
-  PointTarget target1;
-  target1.x = 24.0;
-  target1.y = 24.0;
-  target1.linear_pid = linear_pid;
-  target1.steering_gain = 5;
-  target1.max_v = 80.0; // 50 in/s
-  target1.slew = 2.0;   // 2 in/s per 10ms (200 in/s^2)
-  target1.exit_turn_dist = 7;
+  // PointTarget target1;
+  // target1.x = 0.0;
+  // target1.y = 36.0;
+  // target1.linear_pid = linear_pid;
+  // target1.steering_gain = 5;
+  // target1.max_v = 80.0; // 50 in/s
+  // target1.slew = 2.0;   // 2 in/s per 10ms (200 in/s^2)
+  // target1.exit_turn_dist = 7;
 
-  motions.moveTo(target1);
-  motions.waitUntilPoint(24, 24, 1);
-  pros::delay(1000);
-  motions.cancelMotion();
+  // motions.moveTo(target1);
+  // motions.waitUntilPoint(0, 36, 1);
 
-  // 2. Turn to face a point
-  motions.turnToPoint(0, 5, TurnTarget::Direction::NEAREST, angular_pid, 360.0,
-                      8.0); // max 360 deg/s, slew 8 deg/s per tick
-  motions.waitUntilAngularVelocity(1.0, false);
+  // // 2. Turn to face a point
+  // motions.turnToPoint(36, 38, TurnTarget::Direction::RIGHT, angular_pid,
+  // 360.0,
+  //                     8.0); // max 360 deg/s, slew 8 deg/s per tick
+  // motions.waitUntilAngle(55, 20);
 
-  // 3. Move back to origin
-  PointTarget origin;
-  origin.x = 0;
-  origin.y = 24;
-  origin.linear_pid = linear_pid;
-  origin.steering_gain = 1.5;
-  origin.exit_turn_dist = 4.0;
-  origin.max_v = 50.0;
-  origin.reversed = true;
+  // // 3. Move back to origin
+  // PointTarget origin;
+  // origin.x = 36.0;
+  // origin.y = 48.0;
+  // origin.linear_pid = linear_pid;
+  // origin.steering_gain = 1.5;
+  // origin.exit_turn_dist = 4.0;
+  // origin.max_v = 80.0;
+  // origin.reversed = false;
 
-  motions.moveTo(origin);
-  motions.waitUntilPoint(0, 24, 1.0);
+  // motions.moveTo(origin);
+  // motions.waitUntilPoint(36, 38, 1.0);
 
-  motions.cancelMotion();
+  // motions.cancelMotion();
+
+  PathTarget target1;
+  target1.waypoints.push_back({-36.2, 45.1});
+  target1.waypoints.push_back({-31.5, 53.2}); // intermediate
+  target1.waypoints.push_back({-12.8, 57.7}); // intermediate
+  target1.waypoints.push_back({-2.4, 57.3});  // intermediate
+  target1.waypoints.push_back({9.1, 57.3});   // intermediate
+  target1.waypoints.push_back({20.8, 59.9});  // intermediate
+  target1.waypoints.push_back({33.1, 55.9});  // intermediate
+  target1.waypoints.push_back({35.2, 50.5});  // intermediate
+  target1.waypoints.push_back({22.5, 47.1});  // end
+
+  target1.v_target_end = 0;
+
+  target1.max_dw_per_tick = 0.5; 
+  target1.max_dv_per_tick = 0.075; 
+  target1.weights.q_pos = 5.0;   
+  target1.weights.q_heading = 2.0; 
+  target1.weights.q_cross = 6.0; 
+  target1.weights.q_progress = 1.5; 
+  target1.weights.q_vy = 2.0; 
+
+  target1.weights.w_dv = 10.0;  
+  target1.weights.w_dw = 10.0;  
+  target1.weights.w_dvs = 2.0; 
+
+  target1.weights.w_v = 6.0;   
+  target1.weights.v_ref = 0.8; 
+
+  target1.weights.q_pos_N = 100.0;     
+  target1.weights.q_heading_N = 150.0; 
+  target1.weights.q_cross_N = 80.0;    
+  target1.weights.q_vy_N = 40.0;       
+
+  target1.weights.s_trust = 0.3;         
+  target1.weights.kappa_threshold = 4.0; 
+  target1.intake_offset = 7.0;
+  target1.tolerance = 1.0;
+
+  target1.mpc_control_bounds.vs_max = 1.5;
+  target1.mpc_control_bounds.w_max = 7.75;
+  target1.mpc_control_bounds.w_min = -7.75;
+  target1.mpc_control_bounds.v_min = -0.3;
+  target1.mpc_control_bounds.v_max = 1.2;
+
+  target1.log_mpc_to_sd = true;
+
+  motions.followPath(target1);
+  motions.waitUntilPathDone();
+
+  lv_lock();
+  if (status_label) {
+    lv_label_set_text(status_label, "did we win ?");
+  }
+  lv_unlock();
 }
 
 /**
@@ -240,14 +299,17 @@ void opcontrol() {
   //   lv_unlock();
   // }
 
-  motions.cancelMotion();
-
   // run_linear_sysid(chassis);
   // run_angular_sysid(chassis);
 
-  std::cout << "killed" << std::endl;
-
   static float prev_heading = chassis.get_rotation() * DEG_TO_RAD;
+
+  // Open CSV file for automatic kinetic friction tuning
+  // FILE* friction_log = fopen("/usd/friction_tune.csv", "w");
+  // if (friction_log) {
+  //   fprintf(friction_log, "time,vl,vr,curr_heading,pf_x,pf_y,pf_theta\n");
+  // }
+  // uint32_t start_time = pros::millis();
 
   while (true) {
     // updated chassis and odom
@@ -260,6 +322,19 @@ void opcontrol() {
     pf.update(curr_heading, prev_heading, chassis.get_left_velocity(),
               chassis.get_right_velocity(), f_readings.data(), 0.02);
     prev_heading = curr_heading;
+
+    // if (friction_log) {
+    //   Estimate est = pf.estimate();
+    //   fprintf(friction_log, "%u,%f,%f,%f,%f,%f,%f\n",
+    //           pros::millis() - start_time,
+    //           chassis.get_left_velocity(),
+    //           chassis.get_right_velocity(),
+    //           curr_heading,
+    //           est.x, est.y, est.theta_deg * DEG_TO_RAD);
+    //   // Flush ensures data is saved to SD card right away in case of
+    //   // disconnect
+    //   fflush(friction_log);
+    // }
 
     int left = master.get_analog(ANALOG_LEFT_Y);
     int right = master.get_analog(ANALOG_RIGHT_Y);

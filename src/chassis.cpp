@@ -1,5 +1,6 @@
 #include "chassis.hpp"
 #include <cmath>
+#include <cstdint>
 
 Chassis::Chassis(std::vector<int> left_ports, std::vector<int> right_ports,
                  std::vector<int> imu_ports, std::vector<int> distance_ports,
@@ -30,7 +31,9 @@ Chassis::Chassis(std::vector<int> left_ports, std::vector<int> right_ports,
   }
 
   for (int port : distance_ports) {
-    distances.push_back(std::make_unique<pros::v5::Distance>(port));
+    distances.push_back(
+        std::make_unique<V5_DeviceT>(vexDeviceGetByIndex(port - 1)));
+    last_times_distance.push_back(0);
     last_distances.push_back(0);
   }
 
@@ -114,8 +117,6 @@ void Chassis::update() {
   last_time = now;
 
   // 1. Get Measurements and Commands
-  // Replaced commanded voltage with actual measured voltage to account for
-  // battery sag.
   double vlt_l = 0, vlt_r = 0;
   int cl_v = 0, cr_v = 0;
   for (auto &m : left_motors) {
@@ -126,7 +127,7 @@ void Chassis::update() {
     }
   }
   if (cl_v > 0)
-    vlt_l /= (cl_v * 1000.0); // Convert mV -> V
+    vlt_l /= (cl_v * 1000.0);
 
   for (auto &m : right_motors) {
     double v = m->get_voltage();
@@ -138,7 +139,6 @@ void Chassis::update() {
   if (cr_v > 0)
     vlt_r /= (cr_v * 1000.0);
 
-  // Average motor RPM for each side
   double vl_meas = 0, vr_meas = 0;
   int cl = 0, cr = 0;
 
@@ -163,7 +163,6 @@ void Chassis::update() {
     vr_meas /= cr;
 
   // Convert RPM -> m/s
-  // v = (RPM / 60) * (2*pi*R) / gear_ratio
   double vl_si = (vl_meas / gear_ratio) * (M_PI / 60.0) * wheelDiameter_m;
   double vr_si = (vr_meas / gear_ratio) * (M_PI / 60.0) * wheelDiameter_m;
 
@@ -175,37 +174,67 @@ void Chassis::update() {
   last_heading = curr_heading;
 
   double dh = curr_heading - prev_heading;
-  // Normalize dH to [-180, 180] to handle wrap-around
   while (dh > 180)
     dh -= 360;
   while (dh < -180)
     dh += 360;
 
-  // Angular velocity from IMU (rad/s, CW positive)
   double w_imu = dh * (M_PI / 180.0) / dt;
 
-  // 2. Physics Prediction Step (x_dot = Fx + Gu)
-  // Pack u and current x
+  // 2. Physics Prediction Step
   double u_data[2] = {vlt_l, vlt_r};
   blasfeo_pack_dvec(2, u_data, 1, &su, 0);
 
-  // Current combined state (from last filter)
-  // sx was updated at the end of the previous loop
+  // Get previous states
+  double v_prev = blasfeo_dvecex1(&sx, 0);
+  double w_prev = blasfeo_dvecex1(&sx, 1);
 
-  // Calculate dx/dt = F*sx + G*su
-  // 2. Physics Prediction Step (x_dot = Fx + Gu)
-  // sxdot = 1.0 * sF * sx + 1.0 * sG * su
+  // Calculate dynamic prediction (dx/dt = F*sx + G*su)
   blasfeo_dgemv_n(2, 2, 1.0, &sF, 0, 0, &sx, 0, 0.0, &sxdot, 0, &sxdot, 0);
   blasfeo_dgemv_n(2, 2, 1.0, &sG, 0, 0, &su, 0, 1.0, &sxdot, 0, &sxdot, 0);
 
-  // Predict: x_pred = sx + sxdot * dt
-  blasfeo_dvecad(2, dt, &sxdot, 0, &sx, 0);
+  // =========================================================================
+  // NEW: ROBUST SLIP & STALL PROTECTION
+  // =========================================================================
+  const double MAX_DV =
+      (g_.max_accel_wall_v + g_.max_accel_wall_w * trackWidth_m / 2.0) * dt;
+  bool is_slipping_or_stalled = false;
 
-  double v_pred = blasfeo_dvecex1(&sx, 0);
-  double w_pred = blasfeo_dvecex1(&sx, 1);
+  // A. Wheel Spin-out Protection: Clamp impossible encoder accelerations
+  if (v_enc > v_prev + MAX_DV) {
+    v_enc = v_prev + MAX_DV;
+    is_slipping_or_stalled = true;
+  } else if (v_enc < v_prev - MAX_DV) {
+    v_enc = v_prev - MAX_DV;
+    is_slipping_or_stalled = true;
+  }
 
-  // EKF Covariance Prediction: P_{k|k-1} = A P_{k-1|k-1} A^T + Q
-  // A = I + F*dt = [1 - lambda_v*dt, 0; 0, 1 - lambda_w*dt]
+  // B. Stall / Climbing Protection: Encoder is slow, but voltage predicts fast
+  double expected_v_from_voltage = v_prev + blasfeo_dvecex1(&sxdot, 0) * dt;
+  if (std::abs(v_enc) < 0.15 && std::abs(expected_v_from_voltage) > 0.5) {
+    is_slipping_or_stalled = true;
+  }
+
+  double v_pred, w_pred;
+
+  if (is_slipping_or_stalled) {
+    // "Just use the previous velocity": Bypass the voltage model completely
+    // so the prediction doesn't push the robot through a wall mathematically.
+    v_pred = v_prev * (1.0 - g_.lambda_v * dt);
+    w_pred = w_prev * (1.0 - g_.lambda_w * dt);
+
+    // Sync the blasfeo vector to match this override
+    blasfeo_dvecin1(v_pred, &sx, 0);
+    blasfeo_dvecin1(w_pred, &sx, 1);
+  } else {
+    // Normal Prediction Step
+    blasfeo_dvecad(2, dt, &sxdot, 0, &sx, 0);
+    v_pred = blasfeo_dvecex1(&sx, 0);
+    w_pred = blasfeo_dvecex1(&sx, 1);
+  }
+  // =========================================================================
+
+  // EKF Covariance Prediction
   double a00 = 1.0 - g_.lambda_v * dt;
   double a11 = 1.0 - g_.lambda_w * dt;
   P_cov[0] = a00 * a00 * P_cov[0] + ekf_config_.Q_v * dt;
@@ -213,53 +242,29 @@ void Chassis::update() {
   P_cov[2] = a00 * a11 * P_cov[2];
   P_cov[3] = a11 * a11 * P_cov[3] + ekf_config_.Q_w * dt;
 
-  // EKF Measurement Updates (Sequential processing of independent scalar
-  // measurements)
-  auto apply_update = [&](double z, double h0, double h1, double R,
-                          bool check_slip) {
+  // EKF Measurement Updates (REMOVED MAHALANOBIS REJECTION)
+  // Since we already clamped the encoders to physical reality, we ALWAYS
+  // want the EKF to trust them now.
+  auto apply_update = [&](double z, double h0, double h1, double R) {
     double z_hat = h0 * v_pred + h1 * w_pred;
     double y = z - z_hat;
 
-    // Innovation variance S = H P H^T + R
     double S = h0 * h0 * P_cov[0] + h0 * h1 * P_cov[1] + h1 * h0 * P_cov[2] +
                h1 * h1 * P_cov[3] + R;
 
-    // Slip rejection (Mahalanobis distance)
-    if (check_slip) {
-      double md2 = (y * y) / S;
-      if (md2 > ekf_config_.slip_tolerance) {
-        // Inflate measurement noise drastically to ignore this sensor
-        R += y * y * 10.0;
-        S = h0 * h0 * P_cov[0] + h0 * h1 * P_cov[1] + h1 * h0 * P_cov[2] +
-            h1 * h1 * P_cov[3] + R;
-      }
-    }
-
-    // Kalman Gain K = P H^T / S
     double K0 = (P_cov[0] * h0 + P_cov[1] * h1) / S;
     double K1 = (P_cov[2] * h0 + P_cov[3] * h1) / S;
 
-    // State update
     v_pred += K0 * y;
     w_pred += K1 * y;
 
-    // Covariance update: P = (I - K H) P
     double t00 = 1.0 - K0 * h0, t01 = -K0 * h1;
     double t10 = -K1 * h0, t11 = 1.0 - K1 * h1;
 
-    // double p0_new = t00 * P_cov[0] + t01 * P_cov[2];
-    // double p1_new = t00 * P_cov[1] + t01 * P_cov[3];
-    // double p2_new = t10 * P_cov[0] + t11 * P_cov[2];
-    // double p3_new = t10 * P_cov[1] + t11 * P_cov[3];
-
-    double p0_new =
-        t00 * P_cov[0] + t01 * P_cov[1]; // P[0,0] = t00*P00 + t01*P10
-    double p1_new =
-        t10 * P_cov[0] + t11 * P_cov[1]; // P[1,0] = t10*P00 + t11*P10
-    double p2_new =
-        t00 * P_cov[2] + t01 * P_cov[3]; // P[0,1] = t00*P01 + t01*P11
-    double p3_new =
-        t10 * P_cov[2] + t11 * P_cov[3]; // P[1,1] = t10*P01 + t11*P11
+    double p0_new = t00 * P_cov[0] + t01 * P_cov[1];
+    double p1_new = t10 * P_cov[0] + t11 * P_cov[1];
+    double p2_new = t00 * P_cov[2] + t01 * P_cov[3];
+    double p3_new = t10 * P_cov[2] + t11 * P_cov[3];
 
     P_cov[0] = p0_new;
     P_cov[1] = p1_new;
@@ -268,12 +273,11 @@ void Chassis::update() {
   };
 
   // Process measurements sequentially
-  apply_update(w_imu, 0.0, 1.0, ekf_config_.R_w_imu, false);
-  apply_update(w_enc, 0.0, 1.0, ekf_config_.R_w_enc, false);
-  bool checking_linear_slip = std::abs(vlt_l + vlt_r) > 12.0;
-  apply_update(v_enc, 1.0, 0.0, ekf_config_.R_v_enc, checking_linear_slip);
+  apply_update(w_imu, 0.0, 1.0, ekf_config_.R_w_imu);
+  apply_update(w_enc, 0.0, 1.0, ekf_config_.R_w_enc);
+  apply_update(v_enc, 1.0, 0.0, ekf_config_.R_v_enc);
 
-  // Write updated states back to blasfeo vector sx for the next control cycle
+  // Write updated states back to blasfeo vector sx
   blasfeo_dvecin1(v_pred, &sx, 0);
   blasfeo_dvecin1(w_pred, &sx, 1);
 
@@ -281,12 +285,11 @@ void Chassis::update() {
   double w_new = w_pred;
 
   // 4. Update External Outputs
-  // Map combined state back to side velocities
-  double vl_final = v_new + w_new * (trackWidth_m / 2.0); // m/s
+  double vl_final = v_new + w_new * (trackWidth_m / 2.0);
   double vr_final = v_new - w_new * (trackWidth_m / 2.0);
 
-  last_left_vel = vl_final / 0.0254;  // → in/s
-  last_right_vel = vr_final / 0.0254; // → in/s
+  last_left_vel = vl_final / 0.0254;  // -> in/s
+  last_right_vel = vr_final / 0.0254; // -> in/s
 
   // Position: use raw position (scaled)
   double pl_avg = 0;
@@ -300,7 +303,7 @@ void Chassis::update() {
   }
   if (plc > 0)
     last_left_pos = ((pl_avg / plc) / gear_ratio) * (M_PI * wheelDiameter_m) /
-                    360.0 / 0.0254; // → in
+                    360.0 / 0.0254;
 
   double pr_avg = 0;
   int prc = 0;
@@ -313,13 +316,16 @@ void Chassis::update() {
   }
   if (prc > 0)
     last_right_pos = ((pr_avg / prc) / gear_ratio) * (M_PI * wheelDiameter_m) /
-                     360.0 / 0.0254; // → in
+                     360.0 / 0.0254;
 
-  // IMU was updated earlier for WLS filter
-
-  // Distances
   for (size_t i = 0; i < distances.size(); ++i) {
-    double d = (double)distances[i]->get() / 25.4;
+    uint32_t time = vexDeviceGetTimestamp(*distances[i]);
+    if (time == last_times_distance[i]) {
+      last_distances[i] = 9999;
+      continue;
+    }
+    last_times_distance[i] = time;
+    double d = (double)vexDeviceDistanceDistanceGet(*distances[i]) / 25.4;
     if (d != PROS_ERR_F)
       last_distances[i] = d;
   }

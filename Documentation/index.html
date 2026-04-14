@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VEX V5 Motion Control System Documentation</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f6f8fa;
+            --bg-tertiary: #e1e4e8;
+            --text-primary: #24292e;
+            --text-secondary: #586069;
+            --accent-purple: #6f42c1;
+            --accent-blue: #0366d6;
+            --accent-green: #28a745;
+            --accent-orange: #fb8500;
+            --accent-red: #d73a49;
+            --border-color: #d1d9e0;
+            --code-bg: #f6f8fa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            min-height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.2rem;
+            color: var(--accent-purple);
+            margin-bottom: 5px;
+        }
+
+        .sidebar-header p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .nav-section {
+            padding: 10px 0;
+        }
+
+        .nav-section-title {
+            padding: 10px 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 0.05em;
+        }
+
+        .nav-link {
+            display: block;
+            padding: 8px 20px 8px 30px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background 0.15s, color 0.15s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover {
+            background: var(--bg-tertiary);
+            color: var(--accent-blue);
+        }
+
+        .nav-link.active {
+            background: var(--bg-tertiary);
+            border-left-color: var(--accent-purple);
+            color: var(--accent-purple);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 40px 60px;
+            max-width: 1100px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin: 40px 0 20px;
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin: 30px 0 15px;
+            color: var(--accent-blue);
+        }
+
+        h4 {
+            font-size: 1.1rem;
+            margin: 20px 0 10px;
+            color: var(--accent-purple);
+        }
+
+        p {
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+        }
+
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 30px;
+            color: var(--text-secondary);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* Code Blocks */
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: var(--accent-green);
+        }
+
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        /* Code Syntax Highlighting */
+        .keyword { color: var(--accent-purple); }
+        .type { color: var(--accent-blue); }
+        .function { color: var(--accent-orange); }
+        .string { color: var(--accent-green); }
+        .comment { color: var(--text-secondary); font-style: italic; }
+        .number { color: var(--accent-orange); }
+
+        /* Info Boxes */
+        .info-box {
+            background: var(--bg-tertiary);
+            border-left: 4px solid var(--accent-blue);
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .info-box.warning {
+            border-left-color: var(--accent-orange);
+        }
+
+        .info-box.success {
+            border-left-color: var(--accent-green);
+        }
+
+        .info-box.danger {
+            border-left-color: var(--accent-red);
+        }
+
+        .info-box h4 {
+            margin: 0 0 10px;
+            color: var(--text-primary);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--bg-tertiary);
+            color: var(--accent-purple);
+            font-weight: 600;
+        }
+
+        td {
+            color: var(--text-secondary);
+        }
+
+        tr:hover td {
+            background: var(--bg-tertiary);
+        }
+
+        /* Cards */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .card h3 {
+            margin: 0 0 10px;
+            font-size: 1.1rem;
+        }
+
+        .card p {
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        /* Formula Display */
+        .formula {
+            background: var(--bg-tertiary);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            font-family: 'Times New Roman', serif;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Flow Diagram */
+        .flow-diagram {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .flow-step {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 15px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .flow-number {
+            background: var(--accent-purple);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Section IDs for anchor links */
+        section[id] {
+            scroll-margin-top: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                display: none;
+            }
+            .main-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h1>VEX V5 Motion</h1>
+                <p>Control System Docs</p>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Getting Started</div>
+                <a href="#overview" class="nav-link">Overview</a>
+                <a href="#project-structure" class="nav-link">Project Structure</a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Core Components</div>
+                <a href="#chassis-setup" class="nav-link">Chassis Setup</a>
+                <a href="#velocity-ekf" class="nav-link">Velocity EKF</a>
+                <a href="#particle-filter" class="nav-link">Particle Filter</a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Tuning</div>
+                <a href="#sysid" class="nav-link">System ID</a>
+                <a href="#friction-tuning" class="nav-link">Friction Tuning</a>
+                <a href="#velocity-controller" class="nav-link">Velocity Controller</a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Motion Control</div>
+                <a href="#move-to-point" class="nav-link">Move to Point</a>
+                <a href="#mpcc" class="nav-link">MPC Path Following</a>
+                <a href="#path-planner" class="nav-link">Path Planner</a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Reference</div>
+                <a href="#api-reference" class="nav-link">API Reference</a>
+                <a href="#configuration" class="nav-link">Configuration</a>
+                <a href="#troubleshooting" class="nav-link">Troubleshooting</a>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <section id="overview">
+                <h1>VEX V5 Motion Control System</h1>
+                <p>A sophisticated robotics control stack for VEX V5 featuring model-based control, sensor fusion, and optimal path following. This system implements a complete pipeline from low-level motor control to high-level trajectory planning using Model Predictive Contouring Control (MPCC).</p>
+
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>Super-Twisting SMC</h3>
+                        <p>Robust velocity control with friction feedforward and slip protection.</p>
+                    </div>
+                    <div class="card">
+                        <h3>EKF + Particle Filter</h3>
+                        <p>Sensor fusion for velocity estimation and global localization.</p>
+                    </div>
+                    <div class="card">
+                        <h3>MPCC Path Following</h3>
+                        <p>Model Predictive Contouring Control with acados solver.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Auto-Tuning</h3>
+                        <p>System identification and friction parameter optimization.</p>
+                    </div>
+                </div>
+
+                <h3>Key Features</h3>
+                <ul>
+                    <li><strong>Physics-Based Dynamics:</strong> Motor model with resistance, torque constant, back-EMF, and Coulomb friction</li>
+                    <li><strong>Real-Time Estimation:</strong> Extended Kalman Filter for velocity, NEON-optimized Particle Filter for position</li>
+                    <li><strong>Sliding Mode Control:</strong> Super-twisting algorithm with integral action for robust tracking</li>
+                    <li><strong>Optimal Control:</strong> MPCC with 20-step horizon, curvature-aware velocity adaptation</li>
+                    <li><strong>Fast Development:</strong> Hot/cold linking for sub-second upload cycles</li>
+                </ul>
+            </section>
+
+            <section id="project-structure">
+                <h2>Project Structure</h2>
+
+                <pre><code>poopers123/
+├── include/                 # Header files
+│   ├── chassis.hpp          # Chassis class, motor/EKF/STSMC params
+│   ├── motions/
+│   │   ├── motion.hpp       # MotionManager state machine
+│   │   ├── mpcc_controller.hpp  # MPCC solver wrapper
+│   │   ├── pathplanner.hpp  # Bezier path generation
+│   │   ├── sysid.hpp        # System ID data collection
+│   │   └── utils.hpp        # PID, Slew helpers
+│   ├── odom/
+│   │   └── odom.hpp         # Particle Filter (NEON optimized)
+│   └── mpcc/                # Auto-generated acados solver
+├── src/
+│   ├── main.cpp             # Entry point, configuration
+│   ├── chassis.cpp          # Chassis implementation
+│   └── motions/
+│       ├── motion.cpp       # Motion state machine
+│       └── mpcc_controller.cpp  # MPC implementation
+├── util/
+│   ├── generate_ocp.py      # Generate acados solver
+│   ├── sysid_fit.py         # Fit motor parameters
+│   └── optimize_friction.py # Optimize PF drift model
+├── firmware/                # PROS kernel libraries
+├── Makefile                 # Build system (hot/cold)
+└── project.pros             # PROS metadata</code></pre>
+
+                <h3>Coordinate Conventions</h3>
+                <div class="info-box">
+                    <h4>Compass Heading System</h4>
+                    <p>The system uses compass convention: <strong>theta = 0 is North (+Y)</strong>, rotating <strong>CW positive</strong>. This affects all heading calculations and sensor transformations.</p>
+                    <ul>
+                        <li>X: East direction</li>
+                        <li>Y: North direction</li>
+                        <li>Theta: 0° = North, 90° = East, 180° = South, 270° = West</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="build-system">
+            <section id="chassis-setup">
+                <h2>Chassis Setup</h2>
+<div style="text-align: center; margin: 20px 0;">
+  <img src="chassis_coordinates.png" alt="Chassis Coordinate System Diagram" style="max-width: 100%; height: auto; border: 1px solid #d1d9e0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1;">
+</div>
+
+
+                <h3>Hardware Configuration</h3>
+                <p>Configure your robot in <code>main.cpp</code>:</p>
+
+                <pre><code>// Motor ports (negative = reversed)
+std::vector&lt;int&gt; LEFT_MOTOR_PORTS = {11, 13};
+std::vector&lt;int&gt; RIGHT_MOTOR_PORTS = {-12, -1};
+
+// IMU port(s)
+std::vector&lt;int&gt; IMU_PORTS = {3};
+
+// Distance sensors (optional, for PF)
+std::vector&lt;int&gt; DISTANCE_SENSOR_PORTS = {};
+
+// Physical dimensions
+double GEAR_RATIO = 1;              // wheel:motor ratio (e.g., 48:36 = 1.333)
+double WHEEL_DIAMETER = 4;          // inches
+double TRACK_WIDTH = 11.5;          // inches (wheel-to-wheel)
+
+pros::v5::MotorGears CARTRIDGE = pros::v5::MotorGears::green;</code></pre>
+
+                <h3>Chassis Class Initialization</h3>
+                <pre><code>Chassis chassis(
+    LEFT_MOTOR_PORTS,
+    RIGHT_MOTOR_PORTS,
+    IMU_PORTS,
+    DISTANCE_SENSOR_PORTS,
+    GEAR_RATIO,
+    WHEEL_DIAMETER,
+    TRACK_WIDTH,
+    CARTRIDGE,
+    EKFConfig{...}
+);</code></pre>
+
+                <h3>Motor Parameters Structure</h3>
+                <p>The <code>MotorParams</code> struct defines motor physics:</p>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Description</th>
+                        <th>Units</th>
+                    </tr>
+                    <tr>
+                        <td>R</td>
+                        <td>Motor resistance</td>
+                        <td>Ohms</td>
+                    </tr>
+                    <tr>
+                        <td>Kt</td>
+                        <td>Torque constant</td>
+                        <td>N*m/A</td>
+                    </tr>
+                    <tr>
+                        <td>Ke</td>
+                        <td>Back-EMF constant</td>
+                        <td>V*s/rad</td>
+                    </tr>
+                    <tr>
+                        <td>Kv</td>
+                        <td>Velocity constant (= 1/Ke)</td>
+                        <td>rad/s/V</td>
+                    </tr>
+                    <tr>
+                        <td>Imax</td>
+                        <td>Current limit</td>
+                        <td>Amperes</td>
+                    </tr>
+                    <tr>
+                        <td>Vmax</td>
+                        <td>Voltage limit</td>
+                        <td>Volts</td>
+                    </tr>
+                </table>
+
+                <h3>GainsFG Structure</h3>
+                <p>Forward/Gains model parameters from system identification:</p>
+                <pre><code>struct GainsFG {
+    double alpha_v;      // m/s^2 per Volt (linear acceleration gain)
+    double alpha_w;      // rad/s^2 per Volt (angular acceleration gain)
+    double lambda_v;     // 1/s (linear drag coefficient)
+    double lambda_w;     // 1/s (angular drag coefficient)
+    double max_accel_wall_v;  // m/s^2 max linear accel @ 12V
+    double max_accel_wall_w;  // rad/s^2 max angular accel @ 12V
+    double kS_v;         // Volts (Coulomb friction - linear)
+    double kS_w;         // Volts (Coulomb friction - angular/scrub)
+};</code></pre>
+
+                <div class="info-box">
+                    <h4>Setting Gains</h4>
+                    <pre><code>chassis.set_gains({
+    .alpha_v = 2.36,
+    .alpha_w = 17.80,
+    .lambda_v = 20.0,
+    .lambda_w = 20.0,
+    .max_accel_wall_v = 2.36,
+    .max_accel_wall_w = 17.80,
+    .kS_v = 1.21,
+    .kS_w = 1.93,
+});</code></pre>
+                </div>
+            </section>
+
+            <section id="velocity-ekf">
+                <h2>Velocity EKF</h2>
+
+                <p>The Extended Kalman Filter estimates linear (v) and angular (ω) velocity from encoders and IMU. It provides robust estimates even during wheel slip or stall conditions.</p>
+
+                <h3>State Model</h3>
+                <div class="formula">
+                    x = [v, ω]<sup>T</sup> &nbsp;&nbsp;(linear and angular velocity)
+                </div>
+
+                <div class="formula">
+                    dx/dt = F·x + G·u &nbsp;&nbsp;where F = [-λ<sub>v</sub>, 0; 0, -λ<sub>w</sub>]
+                </div>
+
+                <h3>EKF Configuration</h3>
+                <pre><code>struct EKFConfig {
+    double Q_v = 0.05;      // Process noise (linear)
+    double Q_w = 0.05;      // Process noise (angular)
+    double R_v_enc = 0.02;  // Encoder measurement noise (linear)
+    double R_w_enc = 0.02;  // Encoder measurement noise (angular)
+    double R_w_imu = 0.005; // IMU measurement noise (angular)
+    double slip_tolerance = 9.0; // Mahalanobis threshold
+};</code></pre>
+
+                <h3>Slip/Stall Protection</h3>
+                <p>The EKF includes automatic slip detection:</p>
+                <ol>
+                    <li><strong>Wheel Spin-out:</strong> Clamps encoder velocities to physically possible accelerations</li>
+                    <li><strong>Stall Detection:</strong> Bypasses voltage model when encoders show near-zero but voltage predicts fast motion</li>
+                    <li><strong>Model Override:</strong> Uses simple decay model during detected slip events</li>
+                </ol>
+
+                <div class="info-box success">
+                    <h4>Measurement Update Order</h4>
+                    <p>Updates are applied sequentially: IMU angular velocity → Encoder angular velocity → Encoder linear velocity. This ordering prioritizes the IMU for angular estimation.</p>
+                </div>
+
+                <h3>Accessing Estimates</h3>
+                <pre><code>double v_ms = chassis.get_linear_velocity();  // m/s
+double w_rads = chassis.get_angular_velocity(); // rad/s (CW positive)
+
+// Wheel velocities (in/s, useful for PF)
+double vl_ins = chassis.get_left_velocity();
+double vr_ins = chassis.get_right_velocity();</code></pre>
+            </section>
+
+            <section id="particle-filter">
+                <h2>Particle Filter Localization</h2>
+
+                <p>The Particle Filter provides global localization using distance sensors and odometry. It uses Monte Carlo localization with NEON SIMD optimizations for real-time performance.</p>
+
+                <h3>Configuration</h3>
+                <pre><code>struct PFConfig {
+    float distance_sensor_stddev = 0.83f;      // Sensor noise (inches)
+    float motion_distance_stddev = 0.001f;     // Odometry slip noise
+    float kinetic_friction = 68.0f;            // Drift model friction
+    float max_drift_speed = 41.0f;             // Max lateral velocity (in/s)
+    float motion_heading_stddev = 0.001f;      // Heading integration noise
+    float uniform_noise_probability = 0.0127f; // Random noise injection
+    float random_particle_probability = 0.005f;// Random particle injection
+    float resampling_threshold = 0.5f;         // Distance before resample
+    float max_time_before_resample = 0.05f;    // Time before resample
+};</code></pre>
+
+
+<h3>Detailed PFConfig Parameter Guide</h3>
+<p>Each PFConfig parameter controls a specific aspect of the particle filter behavior. Proper tuning is critical for optimal localization performance.</p>
+
+<h4>Measurement Model Parameters</h4>
+<table>
+<tr>
+    <th>Parameter</th>
+    <th>Description</th>
+    <th>Tuning Guidance</th>
+</tr>
+<tr>
+    <td><code>distance_sensor_stddev</code></td>
+    <td>Standard deviation of distance sensor noise in inches. This represents how much you trust your distance sensors.</td>
+    <td>
+        <strong>Low values (0.1-0.5):</strong> Trust sensors heavily - good for accurate sensors in simple environments<br>
+        <strong>High values (1.0-2.0):</strong> Distrust sensors - good for noisy sensors or complex environments<br>
+        <strong>Typical value:</strong> 0.83" (VEX ultrasonic sensors)
+    </td>
+</tr>
+</table>
+
+<h4>Motion Model Parameters</h4>
+<table>
+<tr>
+    <th>Parameter</th>
+    <th>Description</th>
+    <th>Tuning Guidance</th>
+</tr>
+<tr>
+    <td><code>motion_distance_stddev</code></td>
+    <td>Standard deviation of forward/backward motion in inches. Models how much your robot slips when driving straight.</td>
+    <td>
+        <strong>Low values (0.0001-0.001):</strong> Very precise motion - good for tank treads, low acceleration<br>
+        <strong>High values (0.01-0.1):</strong> Slippery motion - good for Mecanum wheels, high acceleration<br>
+        <strong>Start with:</strong> 0.001, increase if seeing tracking loss during fast maneuvers
+    </td>
+</tr>
+<tr>
+    <td><code>motion_heading_stddev</code></td>
+    <td>Standard deviation of heading change in radians. Models how much error accumulates in rotation.</td>
+    <td>
+        <strong>Low values (0.0001-0.001):</strong> Precise rotation - good for high-quality IMU, low wheel slip<br>
+        <strong>High values (0.01-0.1):</strong> Uncertain rotation - good for wheel slip, poor IMU<br>
+        <strong>Typical value:</strong> 0.001
+    </td>
+</tr>
+</table>
+
+<h4>Drift Model Parameters</h4>
+
+
+<h4>Drift Model Parameters</h4>
+<table>
+<tr>
+    <th>Parameter</th>
+    <th>Description</th>
+    <th>Tuning Guidance</th>
+</tr>
+<tr>
+    <td><code>kinetic_friction</code></td>
+    <td>Kinetic friction coefficient for lateral drift velocity decay. Higher values = less drift.</td>
+    <td>
+<strong>Low values (20-40):</strong> High drift - good for Mecanum or omni wheels<br>
+<strong>High values (80-120):</strong> Low drift - good for tank drive<br>
+<strong>Tuning method:</strong> Run the friction tuning script in optimize_friction.py
+    </td>
+</tr>
+<tr>
+    <td><code>max_drift_speed</code></td>
+    <td>Maximum lateral drift velocity the model can produce in inches/second.</td>
+    <td>
+<strong>Low values (10-20):</strong> Minimal drift - good for tank drive<br>
+<strong>High values (40-60):</strong> High drift potential - good for Mecanum<br>
+<strong>Tuning method:</strong> Observe actual drift during sideways motion, set 2x the observed max
+    </td>
+</tr>
+</table>
+
+<h3>Sensor Configuration Diagram</h3>
+<div style="text-align: center; margin: 20px 0;">
+  <img src="sensor_config.png" alt="Sensor Configuration Diagram" style="max-width: 100%; height: auto; border: 1px solid #d1d9e0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+</div>
+
+<h3>Setup and Map</h3>
+<pre><code>// Initialize with 500 particles
+ParticleFilter pf(500, sensor_configs, pfc,
+    start_x, start_y, start_theta);
+
+// Set field boundaries (example: 141" x 141" field)
+std::vector&lt;MapSegment&gt; segs = {
+    {-70.5, -70.5, 70.5, -70.5}, // South wall
+    {70.5, -70.5, 70.5, 70.5},   // East wall
+    {70.5, 70.5, -70.5, 70.5},   // North wall
+    {-70.5, 70.5, -70.5, -70.5}  // West wall
+};
+pf.set_map(segs);</code></pre>
+
+<h3>Drift Model</h3>
+<p>The particle filter includes a kinetic friction drift model for lateral velocity:</p>
+<div class="formula">
+v<sub>y</sub><sup>+</sup> = v<sub>y</sub> - clamp(v*w*dt, -f<sub>k</sub>*dt, +f<sub>k</sub>*dt) - sign(v<sub>y</sub>)*f<sub>k</sub>*dt
+</div>
+
+<h3>Update Loop</h3>
+<pre><code>// In your main loop (10-20ms):
+float curr_heading = chassis.get_rotation() * DEG_TO_RAD;
+std::vector&lt;float&gt; readings = chassis.get_distance_readings();
+
+pf.update(
+    curr_heading, // Current IMU heading (rad)
+    prev_heading, // Previous heading
+    chassis.get_left_velocity(), // in/s
+    chassis.get_right_velocity(), // in/s
+    readings.data(), // Distance sensor array
+    dt // Time step (s)
+);
+
+Estimate est = pf.estimate();
+// est.x, est.y (inches), est.theta_deg (degrees), est.lateral (in/s)</code></pre>
+
+<h3>Sensor Configuration</h3>
+<pre><code>struct SensorConfig {
+    float dx, dy; // Mounting offset from COM (inches)
+    float angle; // Sensor facing angle (degrees, compass convention)
+};
+
+std::vector&lt;SensorConfig&gt; sensors = {
+    {5.0, 0.0, 0.0},   // Front sensor
+    {-5.0, 0.0, 180.0}, // Back sensor
+};</code></pre>
+
+<div class="info-box">
+<h4>NEON Optimization</h4>
+<p>The particle filter processes 4 particles simultaneously using ARM NEON SIMD. Key optimizations include vectorized sin/cos approximation and fast ray-segment intersection with spatial grid culling.</p>
+</div>
+</section>
+<table>
+<tr>
+    <th>Parameter</th>
+    <th>Description</th>
+    <th>Tuning Guidance</th>
+</tr>
+<tr>
+    <td><code>kinetic_friction</code></td>
+    <td>Kinetic friction coefficient for lateral drift velocity decay. Higher values = less drift.</td>
+    <td>
+        <strong>Low values (20-40):</strong> High drift - good for Mecanum or omni wheels<br>
+        <strong>High values (80-120):</strong> Low drift - good for tank drive<br>
+        <strong>Tuning method:</strong> Run the friction tuning script in optimize_friction.py
+    </td>
+</tr>
+<tr>
+    <td><code>max_drift_speed</code></td>
+    <td>Maximum lateral drift velocity the model can produce in inches/second.</td>
+    <td>
+        <strong>Low values (10-20):</strong> Minimal drift - good for tank drive<br>
+        <strong>High values (40-60):</strong> High drift potential - good for Mecanum<br>
+        <strong>Tuning method:</strong> Observe actual drift during sideways motion, set 2x the observed max
+    </td>
+</tr>
+</table>
+
+<h4>Resampling Parameters</h4>
+<table>
+<tr>
+    <th>Parameter</th>
+    <th>Description</th>
+    <th>Tuning Guidance</th>
+</tr>
+<tr>
+    <td><code>resampling_threshold</code></td>
+    <td>Distance traveled (inches) before triggering particle resampling. Controls how often particles are regenerated.</td>
+    <td>
+        <strong>Low values (0.1-0.5):</strong> Frequent resampling - keeps particles fresh, but can lose diversity<br>
+        <strong>High values (1.0-3.0):</strong> Infrequent resampling - maintains particle diversity longer<br>
+        <strong>Typical value:</strong> 0.5" (resample every 0.5 inches of travel)
+    </td>
+</tr>
+<tr>
+    <td><code>max_time_before_resample</code></td>
+    <td>Time elapsed (seconds) before triggering resampling. Safety measure for when robot is stationary.</td>
+    <td>
+        <strong>Low values (0.01-0.05):</strong> Quick timeout - resample frequently even when stationary<br>
+        <strong>High values (0.1-0.5):</strong> Slow timeout - allow particles to converge when stationary<br>
+        <strong>Typical value:</strong> 0.05s (50ms)
+    </td>
+</tr>
+</table>
+
+<h4>Particle Injection Parameters</h4>
+<table>
+<tr>
+    <th>Parameter</th>
+    <th>Description</th>
+    <th>Tuning Guidance</th>
+</tr>
+<tr>
+    <td><code>uniform_noise_probability</code></td>
+    <td>Probability of injecting uniform random noise during measurement updates. Helps recover from kidnapping/reset.</td>
+    <td>
+        <strong>Low values (0.001-0.01):</strong> Conservative - rare random jumps<br>
+        <strong>High values (0.05-0.1):</strong> Aggressive - frequent random jumps, can destabilize tracking<br>
+        <strong>Typical value:</strong> 0.0127 (1.27%)
+    </td>
+</tr>
+<tr>
+    <td><code>random_particle_probability</code></td>
+    <td>Probability of injecting completely random particles during resampling. Helps escape local minima.</td>
+    <td>
+        <strong>Low values (0.001-0.005):</strong> Rare random particles<br>
+        <strong>High values (0.01-0.05):</strong> More random particles, reduces tracking stability<br>
+        <strong>Typical value:</strong> 0.005 (0.5%)
+    </td>
+</tr>
+</table>
+
+<h3>Particle Filter Tuning Process</h3>
+<ol>
+    <li><strong>Start with reliable odometry:</strong> Before tuning the particle filter, ensure your chassis velocity EKF is well-tuned. Poor odometry inputs will make the PF underperform no matter what.</li>
+
+    <li><strong>Disable all random injections:</strong> Set <code>uniform_noise_probability = 0</code> and <code>random_particle_probability = 0</code> to observe clean behavior.</li>
+
+    <li><strong>Tune motion model first:</strong> Drive your robot around and watch the particle cloud. If particles spread too much, increase <code>motion_distance_stddev</code> and <code>motion_heading_stddev</code>. If particles converge too quickly (lose diversity and get stuck), decrease them.</li>
+
+    <li><strong>Add sensor model:</strong> With distance sensors enabled, adjust <code>distance_sensor_stddev</code>. Too low = particles too confident, may diverge. Too high = sensor data has minimal effect.</li>
+
+    <li><strong>Calibrate drift:</strong> For robots that experience significant lateral drift (Mecanum, omni), set <code>kinetic_friction</code> and <code>max_drift_speed</code> using the provided tuning scripts.</li>
+
+    <li><strong>Add randomization back:</strong> Slowly increase <code>uniform_noise_probability</code> and <code>random_particle_probability</code> until the filter can recover from being manually moved.</li>
+
+    <li><strong>Adjust resampling:</strong> If you see particle depletion (all particles at same location), decrease <code>resampling_threshold</code>. If tracking is jittery, increase it.</li>
+</ol>
+
+<div class="info-box warning">
+<h4>Common Tuning Issues</h4>
+<p><strong>Particles converge too quickly:</strong> Lower <code>distance_sensor_stddev</code> or increase <code>motion_</code>stddev parameters</p>
+<p><strong>Particles never converge:</strong> Increase <code>distance_sensor_stddev</code> or decrease <code>motion_</code>stddev parameters</p>
+<p><strong>Tracking lost during turns:</strong> Increase <code>motion_heading_stddev</code> to allow more rotational uncertainty</p>
+<p><strong>Tracking lost during acceleration:</strong> Increase <code>motion_distance_stddev</code> to allow more linear uncertainty</p>
+</div>
+                <h3>Setup and Map</h3>
+                <pre><code>// Initialize with 500 particles
+ParticleFilter pf(500, sensor_configs, pfc,
+                  start_x, start_y, start_theta);
+
+// Set field boundaries (example: 141" × 141" field)
+std::vector&lt;MapSegment&gt; segs = {
+    {-70.5, -70.5, 70.5, -70.5},  // South wall
+    {70.5, -70.5, 70.5, 70.5},    // East wall
+    {70.5, 70.5, -70.5, 70.5},    // North wall
+    {-70.5, 70.5, -70.5, -70.5}   // West wall
+};
+pf.set_map(segs);</code></pre>
+
+                <h3>Drift Model</h3>
+                <p>The particle filter includes a kinetic friction drift model for lateral velocity:</p>
+                <div class="formula">
+                    v<sub>y</sub><sup>+</sup> = v<sub>y</sub> - clamp(v·ω·dt, -f<sub>k</sub>·dt, +f<sub>k</sub>·dt) - sign(v<sub>y</sub>)·f<sub>k</sub>·dt
+                </div>
+
+                <h3>Update Loop</h3>
+                <pre><code>// In your main loop (10-20ms):
+float curr_heading = chassis.get_rotation() * DEG_TO_RAD;
+std::vector&lt;float&gt; readings = chassis.get_distance_readings();
+
+pf.update(
+    curr_heading,          // Current IMU heading (rad)
+    prev_heading,          // Previous heading
+    chassis.get_left_velocity(),   // in/s
+    chassis.get_right_velocity(),  // in/s
+    readings.data(),       // Distance sensor array
+    dt                     // Time step (s)
+);
+
+Estimate est = pf.estimate();
+// est.x, est.y (inches), est.theta_deg (degrees), est.lateral (in/s)</code></pre>
+
+                <h3>Sensor Configuration</h3>
+                <pre><code>struct SensorConfig {
+    float dx, dy;   // Mounting offset from COM (inches)
+    float angle;    // Sensor facing angle (degrees, compass convention)
+};
+
+std::vector&lt;SensorConfig&gt; sensors = {
+    {5.0, 0.0, 0.0},    // Front sensor
+    {-5.0, 0.0, 180.0}, // Back sensor
+};</code></pre>
+
+                <div class="info-box">
+                    <h4>NEON Optimization</h4>
+                    <p>The particle filter processes 4 particles simultaneously using ARM NEON SIMD. Key optimizations include vectorized sin/cos approximation and fast ray-segment intersection with spatial grid culling.</p>
+                </div>
+            </section>
+
+            <section id="sysid">
+                <h2>System Identification</h2>
+
+                <p>Collect motor dynamics data to fit the parameters K (gain), τ (time constant), and kS (friction).</p>
+
+                <h3>Data Collection</h3>
+                <p>Run data collection in <code>opcontrol()</code>:</p>
+
+                <pre><code>// Linear sysid (drives forward/backward)
+run_linear_sysid(chassis);
+
+// Angular sysid (spins in place)
+run_angular_sysid(chassis);</code></pre>
+
+                <h3>Excitation Signals</h3>
+                <p>The sysid session runs three phases:</p>
+                <table>
+                    <tr>
+                        <th>Phase</th>
+                        <th>Description</th>
+                        <th>Purpose</th>
+                    </tr>
+                    <tr>
+                        <td>Multi-step</td>
+                        <td>Staircase of increasing voltage</td>
+                        <td>DC gains</td>
+                    </tr>
+                    <tr>
+                        <td>PRBS</td>
+                        <td>Pseudo-random binary sequence</td>
+                        <td>Bandwidth characterization</td>
+                    </tr>
+                    <tr>
+                        <td>Chirp</td>
+                        <td>Frequency sweep 0.1-5 Hz</td>
+                        <td>Frequency response</td>
+                    </tr>
+                </table>
+
+                <h3>Offline Fitting</h3>
+                <p>After collecting data (saved to SD card as <code>sysid_linear.csv</code> and <code>sysid_angular.csv</code>):</p>
+
+                <pre><code># Copy files from V5 SD card to util folder, then run:
+python util/sysid_fit.py
+
+# Or with custom filenames:
+python util/sysid_fit.py sysid_linear.csv sysid_angular.csv [trackwidth(in inches)]</code></pre>
+
+                <h3>Output Interpretation</h3>
+                <p>The fitter outputs ready-to-paste code:</p>
+                <pre><code>GainsFG gains = {
+    .alpha_v = 2.361798,   // m/s^2/V
+    .alpha_w = 17.800235,  // rad/s^2/V
+    .lambda_v = 20.000000, // 1/s
+    .lambda_w = 20.000000, // 1/s
+    .max_accel_wall_v = 2.36, // m/s^2 @ 12V
+    .max_accel_wall_w = 17.80, // rad/s^2 @ 12V
+    .kS_v = 1.2074,        // V
+    .kS_w = 1.9308,        // V
+};
+
+EKFConfig ekf_cfg = {
+    .Q_v = 0.070366,
+    .Q_w = 0.153613,
+    .R_v_enc = 0.000100,
+    .R_w_enc = 0.000100,
+    .R_w_imu = 0.000662,
+};</code></pre>
+
+                <div class="info-box warning">
+                    <h4>Important</h4>
+                    <p>Linear sysid measures vL and vR together (drives straight). Angular sysid measures them with opposite signs (spins in place). The track width must be accurate for angular parameters!</p>
+                </div>
+            </section>
+
+            <section id="friction-tuning">
+                <h2>Friction Parameter Tuning</h2>
+
+                <p>Optimize the particle filter's kinetic friction parameter to match actual robot drift behavior.</p>
+
+                <h3>Data Collection</h3>
+                <p>Enable logging in <code>opcontrol()</code>:</p>
+                <pre><code>FILE* friction_log = fopen("/usd/friction_tune.csv", "w");
+fprintf(friction_log, "time,vl,vr,curr_heading,pf_x,pf_y,pf_theta\n");
+
+// In control loop:
+fprintf(friction_log, "%u,%f,%f,%f,%f,%f,%f\n",
+    pros::millis() - start_time,
+    chassis.get_left_velocity(),
+    chassis.get_right_velocity(),
+    curr_heading,
+    est.x, est.y, est.theta_deg * DEG_TO_RAD);
+fflush(friction_log);</code></pre>
+
+                <h3>Optimization</h3>
+                <pre><code># Copy friction_tune.csv from V5, then:
+python util/optimize_friction.py --csv friction_tune.csv
+
+# Output:
+# Optimal kinetic friction (fk): 68.0315</code></pre>
+
+                <h3>Updating the Parameter</h3>
+                <pre><code>PFConfig pfc = {
+    .kinetic_friction = 68.0315,  // Optimized value
+    // ... other params
+};</code></pre>
+
+                <div class="info-box">
+                    <h4>Physical Interpretation</h4>
+                    <p>The kinetic friction parameter represents the maximum lateral acceleration the robot can experience before the wheels break traction. Higher values mean more drift during turns. Typical values: 30-100 depending on wheel type and carpet.</p>
+                </div>
+            </section>
+
+            <section id="velocity-controller">
+                <h2>Velocity Controller (STSMC)</h2>
+
+                <p>The Super-Twisting Sliding Mode Controller provides robust velocity tracking with friction feedforward.</p>
+
+                <h3>STSMC Parameters</h3>
+                <pre><code>struct STSMCParams {
+    double Lambda[2] = {1.2, 1.2};  // Sliding surface gain
+    double K1[2] = {6.5, 6.5};      // Proportional gain
+    double K2[2] = {12.0, 12.0};    // Integral gain
+    double s_eps = 0.01;            // Smoothing boundary
+    double z_max[2] = {12.0, 12.0}; // Integrator limits (Volts)
+    double Imax_per_side = 5.0;     // Current limit
+};</code></pre>
+
+
+<h3>Detailed STSMC Parameter Guide</h3>
+<p>Each STSMC parameter controls a specific aspect of the sliding mode controller. Proper tuning ensures fast, accurate velocity tracking without oscillations.</p>
+
+<h4>Sliding Surface Parameters</h4>
+<table>
+<tr>
+    <th>Parameter</th>
+    <th>Description</th>
+    <th>Tuning Guidance</th>
+</tr>
+<tr>
+    <td><code>Lambda[2]</code></td>
+    <td>Sliding surface gain for linear and angular velocity. Controls how aggressively the controller reacts to velocity errors.</td>
+    <td>
+        <strong>Low values (0.5-1.0):</strong> Soft response - may be too slow for fast maneuvers<br>
+        <strong>High values (2.0-5.0):</strong> Aggressive response - fast tracking, may oscillate<br>
+        <strong>Typical value:</strong> 1.2<br>
+        <strong>Tuning:</strong> Increase until you see slight oscillation, then reduce by 20%
+    </td>
+</tr>
+</table>
+
+<h4>Controller Gains</h4>
+<table>
+<tr>
+    <th>Parameter</th>
+    <th>Description</th>
+    <th>Tuning Guidance</th>
+</tr>
+<tr>
+    <td><code>K1[2]</code></td>
+    <td>Proportional gain in the super-twisting algorithm. Controls the main control action.</td>
+    <td>
+        <strong>Low values (2.0-4.0):</strong> Gentle control - may not overcome friction<br>
+        <strong>High values (8.0-15.0):</strong> Strong control - fast response, may chatter<br>
+        <strong>Typical value:</strong> 6.5<br>
+        <strong>Tuning:</strong> Increase until step response has minimal overshoot
+    </td>
+</tr>
+<tr>
+    <td><code>K2[2]</code></td>
+    <td>Integral gain in the super-twisting algorithm. Helps reject disturbances and steady-state error.</td>
+    <td>
+        <strong>Low values (5.0-10.0):</strong> Slow integral action - may leave offset<br>
+        <strong>High values (15.0-25.0):</strong> Fast integral action - good disturbance rejection<br>
+        <strong>Typical value:</strong> 12.0<br>
+        <strong>Tuning:</strong> Set 1.5-2.0x higher than K1 for good disturbance rejection
+    </td>
+</tr>
+</table>
+
+<h4>Smoothing and Saturation</h4>
+<table>
+<tr>
+    <th>Parameter</th>
+    <th>Description</th>
+    <th>Tuning Guidance</th>
+</tr>
+<tr>
+    <td><code>s_eps</code></td>
+    <td>Boundary layer thickness for smoothing the sign function. Prevents chattering in the control signal.</td>
+    <td>
+        <strong>Low values (0.001-0.005):</strong> Hard switching - may cause chattering<br>
+        <strong>High values (0.02-0.05):</strong> Soft switching - smoother control<br>
+        <strong>Typical value:</strong> 0.01<br>
+        <strong>Tuning:</strong> Increase if you hear motor buzzing/humming at steady state
+    </td>
+</tr>
+<tr>
+    <td><code>z_max[2]</code></td>
+    <td>Integrator limit in Volts. Prevents integrator windup from large disturbances.</td>
+    <td>
+        <strong>Low values (6.0-8.0):</strong> Conservative - safe but may limit performance<br>
+        <strong>High values (12.0-15.0):</strong> Aggressive - good for large disturbances<br>
+        <strong>Typical value:</strong> 12.0<br>
+        <strong>Setting:</strong> Set to your maximum motor voltage (typically 12V)
+    </td>
+</tr>
+<tr>
+    <td><code>Imax_per_side</code></td>
+    <td>Current limit per motor side in Amperes. Hardware protection.</td>
+    <td>
+        <strong>Typical values:</strong> 2.5A (small robots) to 5.0A (big robots)<br>
+        <strong>Setting:</strong> Set to 20% below your motor's rated current
+    </td>
+</tr>
+</table>
+
+<h3>STSMC Tuning Process</h3>
+<ol>
+    <li><strong>Start with the provided default values</strong> for your robot size. These are generally good starting points.</li>
+
+    <li><strong>Tune Lambda first:</strong> Perform step velocity commands. Increase Lambda until you see slight oscillation, then reduce by 20%. Too low Lambda = sluggish response. Too high Lambda = oscillation.</li>
+
+    <li><strong>Tune K1 for response speed:</strong> With Lambda fixed, increase K1 until step response has minimal overshoot. Too low K1 = slow response. Too high K1 = overshoot and chatter.</li>
+
+    <li><strong>Tune K2 for disturbance rejection:</strong> Set K2 = 1.5 × K1 initially. Apply external disturbances (push the robot). Increase K2 if the robot doesn't recover quickly. Too high K2 = oversensitive to noise.</li>
+
+    <li><strong>Adjust s_eps for smoothness:</strong> If motors buzz at steady-state, increase s_eps. If response is too soft, decrease s_eps.</li>
+
+    <li><strong>Set z_max and Imax per side:</strong> Based on your motor limits. These are safety parameters.</li>
+</ol>
+
+<div class="info-box warning">
+<h4>Common Tuning Issues</h4>
+<p><strong>Motors buzz/hum at steady state:</strong> Increase <code>s_eps</code> to smooth the controller</p>
+<p><strong>Slow response to velocity commands:</strong> Increase <code>Lambda</code> and/or <code>K1</code></p>
+<p><strong>Overshoot on velocity steps:</strong> Decrease <code>K1</code> or increase <code>s_eps</code></p>
+<p><strong>Can't hold speed under load:</strong> Increase <code>K2</code> for better disturbance rejection</p>
+<p><strong>Oscillations:</strong> Decrease <code>Lambda</code> or increase <code>s_eps</code></p>
+</div>
+                <h3>Control Law</h3>
+                <div class="formula">
+                    s = Λ·e &nbsp;&nbsp;(sliding surface)
+                </div>
+                <div class="formula">
+                    u<sub>st</sub> = -K<sub>1</sub>·√|s|·sign(s) + z
+                </div>
+                <div class="formula">
+                    dz/dt = -K<sub>2</sub>·sign(s)
+                </div>
+
+                <h3>Feedback Linearization</h3>
+                <pre><code>// Desired acceleration from SMC + feedforward:
+xdot_des = v_ref_dot + λ·v_ref + u_st
+
+// Inverse dynamics:
+uL = xdot_v / α_v + xdot_w / α_w
+uR = xdot_v / α_v - xdot_w / α_w</code></pre>
+
+                <h3>Friction Feedforward</h3>
+                <ol>
+                    <li><strong>Coulomb Friction:</strong> Add ±kS_v based on wheel direction</li>
+                    <li><strong>Scrub Friction:</strong> Scale by turn ratio for curved paths</li>
+                </ol>
+
+                <h3>Tuning Guidelines</h3>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Effect</th>
+                        <th>Tuning Direction</th>
+                    </tr>
+                    <tr>
+                        <td>Lambda</td>
+                        <td>Sliding surface sensitivity</td>
+                        <td>Higher = faster tracking, more noise</td>
+                    </tr>
+                    <tr>
+                        <td>K1</td>
+                        <td>Reaching speed</td>
+                        <td>Higher = faster convergence</td>
+                    </tr>
+                    <tr>
+                        <td>K2</td>
+                        <td>Integral action</td>
+                        <td>Higher = eliminates steady-state error</td>
+                    </tr>
+                    <tr>
+                        <td>s_eps</td>
+                        <td>Boundary layer</td>
+                        <td>Higher = smoother, less chattering</td>
+                    </tr>
+                </table>
+
+                <div class="info-box warning">
+                    <h4>Integrator Leakage</h4>
+                    <p>When target velocity is 0, the integrator leaks to decay to 0 in ~0.5 seconds. This prevents "brake creep" where accumulated integral causes slow drift when stopped.</p>
+                </div>
+            </section>
+
+            <section id="move-to-point">
+                <h2>Move to Point</h2>
+<div style="text-align: center; margin: 20px 0;">
+  <img src="move_to_point.png" alt="Move To Point Trajectory Diagram" style="max-width: 100%; height: auto; border: 1px solid #d1d9e0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1;">
+</div>
+
+
+                <p>Simple point-to-point navigation using PID control with pure pursuit steering.</p>
+
+                <h3>PointTarget Configuration</h3>
+                <pre><code>struct PointTarget {
+    double x, y;              // Target position (inches)
+    double max_v = 50.0;      // Maximum velocity (in/s)
+    double min_v = 2.0;       // Minimum velocity (in/s)
+    double slew = 1.0;        // Acceleration limit (in/s per 10ms)
+    bool reversed = false;    // Drive backward
+    PIDCoeffs linear_pid;     // Distance controller
+    double steering_gain = 1.5;
+    double tolerance = 1.0;   // Exit radius (inches)
+    double exit_turn_dist = 4.0;
+    double integral_limit = 0;
+};</code></pre>
+
+                <h3>Usage Example</h3>
+                <pre><code>// PID configuration
+PIDCoeffs linear_pid = {4.0, 0, 0.5};  // P=4, I=0, D=0.5
+
+// Move to point
+PointTarget target;
+target.x = 36.0;
+target.y = 48.0;
+target.max_v = 80.0;
+target.slew = 2.0;
+target.linear_pid = linear_pid;
+target.tolerance = 1.0;
+
+motions.moveTo(target);
+motions.waitUntilPoint(36, 48, 1.0);</code></pre>
+
+                <h3>Pure Pursuit Steering</h3>
+                <p>The steering law computes curvature from angle error:</p>
+                <div class="formula">
+                    K = 2·sin(θ<sub>error</sub>) / max(distance, 2)
+                </div>
+
+                <h3>Turn to Angle</h3>
+                <pre><code>TurnTarget turn;
+turn.target_theta = 90.0;  // Face East
+turn.direction = TurnTarget::Direction::NEAREST;
+turn.max_v = 300.0;  // 300 deg/s max
+turn.slew = 6.0;
+turn.angular_pid = {4.0, 0, 0.5};
+
+motions.turnTo(turn);
+motions.waitUntilAngle(90, 1.0);</code></pre>
+
+                <h3>Turn to Point</h3>
+                <pre><code>// Face a specific coordinate
+motions.turnToPoint(36, 48, TurnTarget::Direction::RIGHT,
+    angular_pid, 360.0, 8.0);</code></pre>
+
+                <h3>Blocking Waits</h3>
+                <pre><code>// Wait until within margin of point
+motions.waitUntilPoint(x, y, margin_inches);
+
+// Wait until within margin of angle
+motions.waitUntilAngle(theta, margin_degrees);
+
+// Wait until pose matches
+motions.waitUntilPose(x, y, theta, pos_margin, theta_margin);
+
+// Wait until traveled distance
+motions.waitUntilDistance(distance_inches);</code></pre>
+            </section>
+
+            <section id="mpcc">
+                <h2>MPCC Path Following</h2>
+<div style="text-align: center; margin: 20px 0;">
+  <img src="mpc_path_following.png" alt="MPC Path Following Controller Diagram" style="max-width: 100%; height: auto; border: 1px solid #d1d9e0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1;">
+</div>
+
+
+                <p>Model Predictive Contouring Control (MPCC) for smooth path tracking. Uses a simplified formulation with Euclidean position error, cross-track error, and a continuous heading cost that avoids the ±180° wrap discontinuity. The controller includes a friction-based drift model for realistic turning behavior.</p>
+
+                <h3>State and Control</h3>
+                <table>
+                    <tr>
+                        <th>State (x)</th>
+                        <th>Description</th>
+                        <th>Units</th>
+                    </tr>
+                    <tr>
+                        <td>x, y</td>
+                        <td>Position</td>
+                        <td>meters</td>
+                    </tr>
+                    <tr>
+                        <td>θ</td>
+                        <td>Heading</td>
+                        <td>radians</td>
+                    </tr>
+                    <tr>
+                        <td>v<sub>y</sub></td>
+                        <td>Lateral velocity (drift)</td>
+                        <td>m/s</td>
+                    </tr>
+                    <tr>
+                        <td>s</td>
+                        <td>Path progress</td>
+                        <td>meters</td>
+                    </tr>
+                </table>
+
+                <table>
+                    <tr>
+                        <th>Control (u)</th>
+                        <th>Description</th>
+                        <th>Units</th>
+                    </tr>
+                    <tr>
+                        <td>v</td>
+                        <td>Forward velocity</td>
+                        <td>m/s</td>
+                    </tr>
+                    <tr>
+                        <td>ω</td>
+                        <td>Angular velocity</td>
+                        <td>rad/s</td>
+                    </tr>
+                    <tr>
+                        <td>v<sub>s</sub></td>
+                        <td>Progress speed</td>
+                        <td>m/s</td>
+                    </tr>
+                </table>
+
+<h3>Weights Configuration</h3>
+<pre><code>struct Weights {
+// Tracking weights
+double q_pos = 10.0;     // Position error (Euclidean distance)
+double q_heading = 5.0;  // Heading error (continuous formula)
+double q_cross = 8.0;    // Cross-track error (sideways from path)
+double q_vy = 4.0;       // Lateral velocity penalty
+
+// Progress reward
+double q_progress = 2.0; // Linear progress reward
+
+// Control rate penalties
+double w_dv = 5.0;       // dv/dt penalty
+double w_dw = 5.0;       // dw/dt penalty
+double w_dvs = 3.0;      // dv_s/dt penalty
+
+// Velocity tracking
+double w_v = 6.0;        // Velocity tracking weight
+double v_ref = 0.8;      // Target velocity (m/s)
+
+// Terminal weights
+double q_pos_N = 20.0;   // Terminal position weight
+double q_heading_N = 10.0; // Terminal heading weight
+double q_cross_N = 16.0; // Terminal cross-track weight
+double q_vy_N = 8.0;     // Terminal lateral velocity weight
+
+// Trust region & adaptation
+double s_trust = 0.3;    // Half-width (meters)
+double kappa_threshold = 4.0; // Curvature adaptation threshold
+};</code></pre>
+
+                <h3>Control Bounds</h3>
+                <pre><code>struct ControlBounds {
+    double v_min = 0.0;    // m/s
+    double v_max = 1.5;
+    double w_min = -2.5;   // rad/s
+    double w_max = 2.5;
+    double vs_min = 0.0;   // m/s
+    double vs_max = 2.0;
+};</code></pre>
+
+                <h3>PathTarget Configuration</h3>
+                <pre><code>PathTarget target;
+
+// Waypoints (inches) - field coordinates
+target.waypoints = {
+    {-31.9, 45.7},   // Start
+    {-31.9, 55.1},   // Intermediate
+    {-2.0, 59.0},
+    {16.3, 58.8},
+    {29.1, 46.2},
+    {21.8, 45.6}     // End
+};
+
+// MPC weights (simplified formulation)
+target.weights.q_pos = 20.0;     // Position error weight
+target.weights.q_heading = 10.0; // Heading error weight
+target.weights.q_cross = 8.0;    // Cross-track error weight
+target.weights.q_progress = 0.5; // Progress reward
+target.weights.v_ref = 1.2;      // Target velocity (m/s)
+target.weights.kappa_threshold = 4.0; // Curvature adaptation
+
+// Control bounds
+target.mpc_control_bounds.v_max = 1.0;
+target.mpc_control_bounds.w_max = 10.0;
+
+// Other settings
+target.tolerance = 1.0;           // Exit radius (inches)
+target.intake_offset = 7.0;       // Distance to intake (inches)
+target.v_target_end = 0.0;        // End velocity (in/s)
+target.log_mpc_to_sd = true;      // Enable SD logging
+
+motions.followPath(target);
+motions.waitUntilPathDone();</code></pre>
+
+<h3>Cost Function</h3>
+<div class="formula">
+J = q<sub>pos</sub>·||p - p<sub>r</sub>|| + ½q<sub>heading</sub>·h(θ, θ<sub>r</sub>) + ½q<sub>cross</sub>·e<sub>c</sub>² + ½q<sub>vy</sub>·v<sub>y</sub>² - q<sub>progress</sub>·v<sub>s</sub>
+</div>
+<p>Where:</p>
+<ul>
+<li><strong>||p - p<sub>r</sub>||</strong> = Euclidean distance to reference position (linear cost for smooth degradation)</li>
+<li><strong>h(θ, θ<sub>r</sub>)</strong> = Continuous heading cost: (cos θ - cos θ<sub>r</sub>)² + (sin θ - sin θ<sub>r</sub>)² (no wrap discontinuity!)</li>
+<li><strong>e<sub>c</sub></strong> = Cross-track error (signed distance perpendicular to path)</li>
+<li><strong>v<sub>y</sub></strong> = Lateral velocity (drift)</li>
+<li><strong>-q<sub>progress</sub>·v<sub>s</sub></strong> = Progress reward (encourages forward motion)</li>
+</ul>
+
+<h3>Continuous Heading Cost</h3>
+<p>The heading error uses a wrap-safe formulation:</p>
+<pre><code>// Instead of (theta - theta_ref)² which has discontinuity at ±180°
+// We use: (cos(th) - cos(ref))² + (sin(th) - sin(ref))²
+// This equals 2(1 - cos(error)) which is smooth everywhere!</code></pre>
+
+<h3>Curvature-Based Adaptation</h3>
+<p>The MPC automatically adapts behavior based on path curvature (κ):</p>
+<pre><code>// Adaptive target velocity (slower in curves)
+v_safe = v_ref / (1 + 0.5 * kappa / kappa_threshold)
+
+// Adaptive cross-track weight (tighter following in curves)
+q_cross_adaptive = q_cross * (1 + kappa / kappa_threshold)</code></pre>
+<ul>
+<li><strong>High curvature:</strong> Reduced target speed, increased cross-track weight for tighter path following</li>
+<li><strong>Low curvature:</strong> Full speed, normal cross-track weight for efficiency</li>
+</ul>
+
+                <h3>Progress Tracking</h3>
+                <p>The controller fuses prediction with projection:</p>
+                <pre><code>// Prediction from previous control
+s_predicted = current_s + |u_prev.v| * dt;
+
+// Projection from position (using intake offset)
+s_projected = projectSFromPosition(xi, yi, s_hint);
+
+// Fused estimate (clamped correction)
+s_fused = s_predicted + clamp(s_proj - s_pred, -0.15, +0.15);</code></pre>
+
+
+<h3>MPCC Weight Tuning Guide</h3>
+<div class="info-box">
+<h4>Quick Start</h4>
+<table>
+<tr><th>Parameter</th><th>Effect</th><th>Typical Range</th></tr>
+<tr><td><code>q_pos</code></td><td>Overall position tracking</td><td>10-50</td></tr>
+<tr><td><code>q_heading</code></td><td>Heading alignment</td><td>5-20</td></tr>
+<tr><td><code>q_cross</code></td><td>Path accuracy (vs speed)</td><td>8-30</td></tr>
+<tr><td><code>q_progress</code></td><td>Forward motion incentive</td><td>0.5-5</td></tr>
+<tr><td><code>v_ref</code></td><td>Target speed (m/s)</td><td>0.5-1.5</td></tr>
+</table>
+</div>
+
+<h4>Position vs Cross-Track</h4>
+<ul>
+<li><strong>High q_pos, Low q_cross:</strong> Robot prioritizes reaching the point, may cut corners</li>
+<li><strong>Low q_pos, High q_cross:</strong> Robot stays on path but may slow down</li>
+<li><strong>Balanced:</strong> q_cross ≈ q_pos for smooth, accurate following</li>
+</ul>
+
+<h4>Heading Weight</h4>
+<ul>
+<li><strong>High q_heading:</strong> Robot turns aggressively to match path heading (good for precise maneuvers)</li>
+<li><strong>Low q_heading:</strong> More gradual turns, smoother motion</li>
+</ul>
+
+<h4>Progress Reward</h4>
+<ul>
+<li><strong>Too high:</strong> Robot rushes forward, may overshoot corners</li>
+<li><strong>Too low:</strong> Robot may stop or move too slowly</li>
+</ul>
+
+<h4>Control Rate Penalties</h4>
+<ul>
+<li><strong>High w_dv, w_dw:</strong> Smoother control transitions, less aggressive acceleration</li>
+<li><strong>Low values:</strong> Snappier response, but may cause wheel slip or jerk</li>
+</ul>
+
+<h4>Trust Region (s_trust)</h4>
+<p>Soft constraint preventing the solver from "cheating" progress:</p>
+<ul>
+<li><strong>Too narrow:</strong> Robot struggles to recover from disturbances</li>
+<li><strong>Too wide:</strong> May allow large position tracking errors</li>
+<li><strong>Typical:</strong> 0.2-0.5 meters</li>
+</ul>
+                <h3>Acados Solver</h3>
+
+<h3>Drift Model (Lateral Velocity)</h3>
+<p>The MPC includes a friction-based lateral velocity model:</p>
+<pre><code>// Drift dynamics: vy decays with friction, increases during turns
+vy_next = vy - centripetal_contribution - friction_decay
+
+// Centripetal force creates drift during turns
+centripetal = v * w * dt  // from centripetal acceleration
+
+// Friction coefficient (fk) determines drift magnitude
+// Higher fk = more drift in turns (slippery surface)
+// Lower fk = less drift (high traction)</code></pre>
+<div class="info-box">
+<h4>Tuning fk (Friction)</h4>
+<ul>
+<li><strong>fk = 0.3:</strong> Typical carpet/foam tile (default)</li>
+<li><strong>fk = 0.5+:</strong> Slippery surface, more drift</li>
+<li><strong>fk = 0.1:</strong> High traction, minimal drift</li>
+</ul>
+<p>Calibrate by observing robot behavior during turns - if the robot drifts more than predicted, increase fk.</p>
+</div>
+                <div class="info-box">
+                    <h4>Solver Configuration</h4>
+                    <ul>
+                        <li><strong>Horizon:</strong> N = 25 nodes</li>
+                        <li><strong>Timesteps:</strong> 10×0.01s + 15×0.02s = 0.4s total</li>
+                        <li><strong>Solver:</strong> SQP-RTI (Real-Time Iteration)</li>
+                        <li><strong>QP Solver:</strong> PARTIAL_CONDENSING_HPIPM</li>
+                    </ul>
+                </div>
+
+                <h3>Regenerating the Solver</h3>
+                <p>If you need to modify the OCP structure:</p>
+                <pre><code># Edit util/generate_ocp.py, then:
+python util/generate_ocp.py
+
+# This generates:
+# - include/mpcc/acados_solver_mpcc.h
+# - mpcc model/cost functions</code></pre>
+            </section>
+
+            <section id="path-planner">
+                <h2>Path Planner</h2>
+
+                <p>Converts discrete waypoints into smooth cubic Bezier curves for the MPC to follow.</p>
+
+                <h3>Bezier Segment Structure</h3>
+                <pre><code>struct BezierSegment {
+    PathVec2 p0, p1, p2, p3;  // Control points
+    double length;             // Arc length
+};</code></pre>
+
+                <h3>Path Generation</h3>
+                <pre><code>PathPlanner planner;
+
+// Set waypoints (in meters for internal use)
+std::vector&lt;PathVec2&gt; wps = {
+    {x1, y1},
+    {x2, y2},
+    {x3, y3}
+};
+planner.setWaypoints(wps);
+
+double total_length = planner.getTotalLength();  // meters
+Pose pose = planner.getPose(s);  // Get pose at progress s</code></pre>
+
+                <h3>Pose Structure</h3>
+                <pre><code>struct Pose {
+    double x;      // Position X (meters)
+    double y;      // Position Y (meters)
+    double theta;  // Heading (radians, compass)
+};</code></pre>
+
+                <h3>Algorithm Details</h3>
+                <ul>
+                    <li><strong>2 waypoints:</strong> Single segment with 1/3 and 2/3 control points</li>
+                    <li><strong>&gt;2 waypoints:</strong> Thomas algorithm for C<sup>1</sup> continuity (smooth tangent)</li>
+                    <li><strong>Arc length:</strong> 5-point Gauss quadrature integration</li>
+                    <li><strong>Pose lookup:</strong> O(1) after segment search</li>
+                </ul>
+
+                <h3>C<sup>1</sup> Continuity</h3>
+                <p>The planner solves a tridiagonal system to ensure the tangent vector is continuous at waypoint boundaries:</p>
+                <div class="formula">
+                    B'(t<sub>i</sub><sup>+</sup>) = B'(t<sub>i+1</sub><sup>-</sup>)
+                </div>
+            </section>
+
+            <section id="api-reference">
+                <h2>API Reference</h2>
+
+                <h3>Chassis</h3>
+                <table>
+                    <tr>
+                        <th>Method</th>
+                        <th>Description</th>
+                        <th>Returns</th>
+                    </tr>
+                    <tr>
+                        <td><code>update()</code></td>
+                        <td>Run EKF update cycle</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>velocity_control(v_ref, w_ref, dt)</code></td>
+                        <td>STSMC velocity control</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>tank(left_v, right_v)</code></td>
+                        <td>Direct voltage control (millivolts)</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>get_linear_velocity()</code></td>
+                        <td>Estimated v</td>
+                        <td>in/s</td>
+                    </tr>
+                    <tr>
+                        <td><code>get_angular_velocity()</code></td>
+                        <td>Estimated ω</td>
+                        <td>rad/s</td>
+                    </tr>
+                    <tr>
+                        <td><code>get_rotation()</code></td>
+                        <td>IMU heading</td>
+                        <td>degrees</td>
+                    </tr>
+                    <tr>
+                        <td><code>reset_sensors()</code></td>
+                        <td>Zero all encoders and IMU</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>set_gains(GainsFG)</code></td>
+                        <td>Set dynamics model</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>set_stsmc_gains(STSMCParams)</code></td>
+                        <td>Set controller params</td>
+                        <td>void</td>
+                    </tr>
+                </table>
+
+                <h3>ParticleFilter</h3>
+                <table>
+                    <tr>
+                        <th>Method</th>
+                        <th>Description</th>
+                        <th>Returns</th>
+                    </tr>
+                    <tr>
+                        <td><code>update(h, h_prev, vl, vr, readings, dt)</code></td>
+                        <td>PF update cycle</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>estimate()</code></td>
+                        <td>Get weighted mean</td>
+                        <td>Estimate</td>
+                    </tr>
+                    <tr>
+                        <td><code>set_map(segments)</code></td>
+                        <td>Set field boundaries</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>reset(x, y, theta)</code></td>
+                        <td>Reset particles</td>
+                        <td>void</td>
+                    </tr>
+                </table>
+
+                <h3>MotionManager</h3>
+                <table>
+                    <tr>
+                        <th>Method</th>
+                        <th>Description</th>
+                        <th>Returns</th>
+                    </tr>
+                    <tr>
+                        <td><code>moveTo(PointTarget)</code></td>
+                        <td>Start point-to-point</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>turnTo(TurnTarget)</code></td>
+                        <td>Start turn</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>turnToPoint(x, y, dir, pid, max_v, slew)</code></td>
+                        <td>Face coordinate</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>followPath(PathTarget)</code></td>
+                        <td>Start MPC path</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>cancelMotion()</code></td>
+                        <td>Stop all motion</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>isDone()</code></td>
+                        <td>Check completion</td>
+                        <td>bool</td>
+                    </tr>
+                    <tr>
+                        <td><code>waitUntilPoint(x, y, margin)</code></td>
+                        <td>Blocking wait</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>waitUntilPathDone()</code></td>
+                        <td>Wait for MPC</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>loop()</code></td>
+                        <td>Main update loop</td>
+                        <td>void</td>
+                    </tr>
+                </table>
+
+                <h3>MPCC_Controller</h3>
+                <table>
+                    <tr>
+                        <th>Method</th>
+                        <th>Description</th>
+                        <th>Returns</th>
+                    </tr>
+                    <tr>
+                        <td><code>setPath(waypoints_m)</code></td>
+                        <td>Load path (meters)</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>setWeights(Weights)</code></td>
+                        <td>Set cost weights</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>setControlBounds(ControlBounds)</code></td>
+                        <td>Set u limits</td>
+                        <td>void</td>
+                    </tr>
+                    <tr>
+                        <td><code>runStep(state, prev_u)</code></td>
+                        <td>Solve one MPC step</td>
+                        <td>Control</td>
+                    </tr>
+                    <tr>
+                        <td><code>getPathLength()</code></td>
+                        <td>Total path length</td>
+                        <td>meters</td>
+                    </tr>
+                    <tr>
+                        <td><code>getPathPoseAtS(s)</code></td>
+                        <td>Reference pose</td>
+                        <td>Pose</td>
+                    </tr>
+                    <tr>
+                        <td><code>projectSFromPosition(x, y, hint)</code></td>
+                        <td>Find closest s</td>
+                        <td>meters</td>
+                    </tr>
+                </table>
+            </section>
+
+            <section id="configuration">
+                <h2>Configuration Checklist</h2>
+
+                <h3>1. Hardware Setup</h3>
+                <ul>
+                    <li>Configure motor ports (negative for reversed)</li>
+                    <li>Set IMU port(s)</li>
+                    <li>Add distance sensors if using PF</li>
+                    <li>Measure track width accurately</li>
+                    <li>Measure wheel diameter</li>
+                </ul>
+
+                <h3>2. System Identification</h3>
+                <ul>
+                    <li>Run <code>run_linear_sysid(chassis)</code></li>
+                    <li>Run <code>run_angular_sysid(chassis)</code></li>
+                    <li>Copy CSV files from SD card</li>
+                    <li>Run <code>sysid_fit.py</code></li>
+                    <li>Paste output into <code>main.cpp</code></li>
+                </ul>
+
+                <h3>3. Friction Tuning</h3>
+                <ul>
+                    <li>Add logging to opcontrol</li>
+                    <li>Drive patterns (figure-8s work well)</li>
+                    <li>Run <code>optimize_friction.py</code></li>
+                    <li>Update <code>kinetic_friction</code> in PFConfig</li>
+                </ul>
+
+                <h3>4. Controller Tuning</h3>
+                <ul>
+                    <li>Start with default STSMCParams</li>
+                    <li>If overshooting: increase K1, K2</li>
+                    <li>If sluggish: decrease Lambda</li>
+                    <li>If oscillating: increase s_eps</li>
+                </ul>
+
+                <h3>5. MPC Tuning</h3>
+                <ul>
+                    <li>Start with provided weights</li>
+                    <li>If cutting corners: increase q_cross</li>
+                    <li>If lagging behind: increase q_progress</li>
+                    <li>If oscillating: increase w_dv, w_dw</li>
+                    <li>If not reaching end: increase terminal weights</li>
+                </ul>
+
+                <div class="info-box success">
+                    <h4>Test Sequence</h4>
+                    <ol>
+                        <li>Test <code>chassis.tank()</code> directly</li>
+                        <li>Test <code>velocity_control()</code> with constant references</li>
+                        <li>Test <code>moveTo()</code> with simple points</li>
+                        <li>Test <code>followPath()</code> with straight line</li>
+                        <li>Add curves and verify tracking</li>
+                    </ol>
+                </div>
+            </section>
+
+            <section id="troubleshooting">
+                <h2>Troubleshooting</h2>
+
+                <h3>Robot Not Moving</h3>
+                <ul>
+                    <li>Check motor ports match physical connections</li>
+                    <li>Verify IMU is calibrated (check <code>imu.is_installed()</code>)</li>
+                    <li>Check <code>set_gains()</code> was called</li>
+                    <li>Ensure <code>motion_task</code> is running</li>
+                </ul>
+
+                <h3>Oscillating/Vibrating</h3>
+                <ul>
+                    <li>Increase <code>s_eps</code> in STSMCParams</li>
+                    <li>Decrease <code>Lambda</code> values</li>
+                    <li>Check EKF noise params (Q_v, Q_w too small?)</li>
+                    <li>Verify motor cartridge matches configuration</li>
+                </ul>
+
+                <h3>Not Reaching Target</h3>
+                <ul>
+                    <li>Check tolerance values</li>
+                    <li>Verify PID coefficients are reasonable</li>
+                    <li>Check for slip (reduce max_v)</li>
+                    <li>Ensure PF is initialized correctly</li>
+                </ul>
+
+                <h3>MPC Not Following Path</h3>
+                <ul>
+                    <li>Check <code>intake_offset</code> is correct</li>
+                    <li>Verify waypoints are in correct coordinate system</li>
+                    <li>Check control bounds are achievable</li>
+                    <li>Enable SD logging and analyze CSV</li>
+                </ul>
+
+                <h3>Particle Filter Diverging</h3>
+                <ul>
+                    <li>Check start position matches reality</li>
+                    <li>Verify map segments are correct</li>
+                    <li>Check sensor configs (mounting positions)</li>
+                    <li>Reduce <code>kinetic_friction</code> if drifting too much</li>
+                </ul>
+
+                <h3>Build Errors</h3>
+                <ul>
+                    <li>Run <code>make clean</code> then <code>make quick</code></li>
+                    <li>Check third-party includes are installed</li>
+                    <li>Verify acados is built for ARM Cortex-A9</li>
+                    <li>Check PROS kernel version</li>
+                </ul>
+
+                <h3>Common Error Messages</h3>
+                <table>
+                    <tr>
+                        <th>Error</th>
+                        <th>Cause</th>
+                        <th>Solution</th>
+                    </tr>
+                    <tr>
+                        <td>PROS_ERR_F returned</td>
+                        <td>Motor/IMU not connected</td>
+                        <td>Check port configuration</td>
+                    </tr>
+                    <tr>
+                        <td>Solver status != 0</td>
+                        <td>MPC infeasible</td>
+                        <td>Relax bounds or check initial state</td>
+                    </tr>
+                    <tr>
+                        <td>nan in velocity</td>
+                        <td>Numerical instability</td>
+                        <td>Check EKF params, reduce gains</td>
+                    </tr>
+                </table>
+            </section>
+
+            <footer style="margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border-color); color: var(--text-secondary); font-size: 0.85rem;">
+                <p>VEX V5 Motion Control System Documentation</p>
+                <p>Built with PROS 4.0 | acados | blasfeo | hpipm</p>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Smooth scrolling for navigation
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                    // Update active state
+                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+                }
+            });
+        });
+
+        // Highlight current section on scroll
+        const sections = document.querySelectorAll('section[id]');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

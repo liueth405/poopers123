@@ -15,3 +15,8 @@ temp.log
 temp.errors
 *.ini
 .d/
+
+# My Own Shit
+sync_server.py
+1711.07300v1.pdf
+MPCC/

@@ -38,11 +38,12 @@ struct PFConfig {
   float distance_sensor_stddev = 0.83f;
   float motion_distance_stddev = 0.45f;
   float kinetic_friction = 0.5f; // Constant friction (f_k) instead of viscous
-  float max_drift_speed = 0.1f; // maximum lateral velocity constraint
+  float max_drift_speed = 0.1f;  // maximum lateral velocity constraint
   float motion_heading_stddev = 0.01f;
   float uniform_noise_probability = 1.0f / 78.74016f;
   float random_particle_probability = 0.005f;
   float resampling_threshold = 0.01f;
+  float max_time_before_resample = 1.0f;
 };
 
 struct Sensor {
@@ -437,6 +438,8 @@ class ParticleFilter {
   float max_range = 78.74016f;
   float max_range_threshold = 77.5f;
 
+  float time = 0.5f;
+
   static void anglewrap(float &angle) {
     angle = std::fmod(angle + PI, PI2);
     if (angle < 0.0f)
@@ -560,7 +563,7 @@ public:
     }
 
     for (size_t i = 0; i < num_aligned; i += 4) {
-      float32x4_t v_weight = vdupq_n_f32(1.0f);
+      float32x4_t v_weight = vld1q_f32(&pw[i]);
       float32x4_t v_px = vld1q_f32(&px[i]);
       float32x4_t v_py = vld1q_f32(&py[i]);
       float32x4_t v_pca = vld1q_f32(&pca[i]);
@@ -612,8 +615,12 @@ public:
       }
     }
 
-    if (accumulated_distance < cfg.resampling_threshold)
+    if (accumulated_distance < cfg.resampling_threshold ||
+        time <= cfg.max_time_before_resample) {
+      time += dt;
       return;
+    }
+    time = 0;
     accumulated_distance = 0.0f;
     resample();
   }
@@ -726,7 +733,8 @@ private:
       float32x4_t kick_mag = vabsq_f32(raw_kick);
       float32x4_t kick_clamped = vminq_f32(kick_mag, f_k_dt);
       uint32x4_t kick_neg = vcltq_f32(raw_kick, v_zero);
-      float32x4_t centrip_kick = vbslq_f32(kick_neg, vnegq_f32(kick_clamped), kick_clamped);
+      float32x4_t centrip_kick =
+          vbslq_f32(kick_neg, vnegq_f32(kick_clamped), kick_clamped);
       float32x4_t v_pre_fric = vsubq_f32(lv, centrip_kick);
 
       // Apply kinetic friction: reduce magnitude towards zero by f_k_dt
@@ -738,14 +746,16 @@ private:
       uint32x4_t v_is_neg = vcltq_f32(v_pre_fric, v_zero);
       float32x4_t lv_raw = vbslq_f32(v_is_neg, vnegq_f32(v_clipped), v_clipped);
 
-      // physical stability: lateral drift cannot exceed total forward speed magnitude.
-      // (An omni-wheel robot skating sideways at 45 degrees has |vy| == |vx|).
+      // physical stability: lateral drift cannot exceed total forward speed
+      // magnitude. (An omni-wheel robot skating sideways at 45 degrees has |vy|
+      // == |vx|).
       float32x4_t max_vy_mag = vabsq_f32(v_fwd);
       float32x4_t lv_mag = vabsq_f32(lv_raw);
       uint32x4_t is_too_fast = vcgtq_f32(lv_mag, max_vy_mag);
-      
+
       // If it's too fast, clamp lv_raw to +/- max_vy_mag
-      float32x4_t lv_clamped = vbslq_f32(v_is_neg, vnegq_f32(max_vy_mag), max_vy_mag);
+      float32x4_t lv_clamped =
+          vbslq_f32(v_is_neg, vnegq_f32(max_vy_mag), max_vy_mag);
       float32x4_t lv_final = vbslq_f32(is_too_fast, lv_clamped, lv_raw);
 
       // final deadband snap
@@ -755,7 +765,8 @@ private:
 
       // final global safety clamp
       const float32x4_t v_max_drift = vdupq_n_f32(cfg.max_drift_speed);
-      lv_new = vminq_f32(vmaxq_f32(lv_new, vnegq_f32(v_max_drift)), v_max_drift);
+      lv_new =
+          vminq_f32(vmaxq_f32(lv_new, vnegq_f32(v_max_drift)), v_max_drift);
       // lv_new = vbslq_f32(lv_too_big, v_fwd, lv_new);
 
       // add existing slip (lv) to kinematics. d = (v + v0) / 2 * t
