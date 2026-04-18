@@ -44,24 +44,24 @@ public:
   // Weights for cost function (separate stage vs terminal)
   struct Weights {
     // Stage weights
-    double q_pos = 10.0;        // Position error (linear Euclidean distance)
-    double q_heading = 5.0;     // Heading error weight
-    double q_cross = 8.0;       // Cross-track error weight
-    double q_vy = 4.0;          // Lateral velocity penalty
-    double q_progress = 2.0;    // Progress reward (incentive to move forward)
+    double q_pos = 10.0;     // Position error (linear Euclidean distance)
+    double q_heading = 5.0;  // Heading error weight
+    double q_cross = 8.0;    // Cross-track error weight
+    double q_vy = 4.0;       // Lateral velocity penalty
+    double q_progress = 2.0; // Progress reward (incentive to move forward)
 
     // Control regularization (penalize magnitude, not tracking)
-    double w_v = 1.0;           // Velocity magnitude penalty (v^2)
-    double w_w = 0.5;           // Angular velocity magnitude penalty (w^2)
-    double w_vs = 0.5;          // Path progress rate magnitude penalty (vs^2)
+    double w_v = 1.0;  // Velocity magnitude penalty (v^2)
+    double w_w = 0.5;  // Angular velocity magnitude penalty (w^2)
+    double w_vs = 0.5; // Path progress rate magnitude penalty (vs^2)
 
     // Control smoothness (penalize changes)
-    double w_dv = 5.0;          // Acceleration penalty
-    double w_dw = 5.0;          // Angular acceleration penalty
-    double w_dvs = 3.0;         // Progress rate smoothness penalty
+    double w_dv = 5.0;  // Acceleration penalty
+    double w_dw = 5.0;  // Angular acceleration penalty
+    double w_dvs = 3.0; // Progress rate smoothness penalty
 
     // Target velocity (optional - set > 0 to enable tracking)
-    double v_ref = 0.0;         // If > 0, adds tracking cost to this velocity
+    double v_ref = 0.0; // If > 0, adds tracking cost to this velocity
 
     // Terminal weights (higher for stability)
     double q_pos_N = 20.0;
@@ -76,9 +76,9 @@ public:
 
   // Control bounds (wheel speed based for differential drive)
   struct Bounds {
-    double min_wheel_speed = -2.0;  // m/s min individual wheel speed (reverse)
-    double max_wheel_speed = 2.0;   // m/s max individual wheel speed
-    double track_width = 0.35;      // meters between wheels
+    double min_wheel_speed = -2.0; // m/s min individual wheel speed (reverse)
+    double max_wheel_speed = 2.0;  // m/s max individual wheel speed
+    double track_width = 0.35;     // meters between wheels
     double vs_min = 0.0;
     double vs_max = 2.0;
   };
@@ -102,7 +102,10 @@ public:
   void setTerminalVelocity(double v_ref) { weights_.v_ref = v_ref; }
   void setIntakeOffset(double offset) { d_intake_ = offset; }
   void setFrictionCoeff(double fk) { fk_ = fk; }
-  void setTrustRegion(double width, double penalty) { weights_.s_trust = width; weights_.s_trust_penalty = penalty; }
+  void setTrustRegion(double width, double penalty) {
+    weights_.s_trust = width;
+    weights_.s_trust_penalty = penalty;
+  }
 
   // Run one iteration
   Control runStep(const State &current_state, const Control &prev_control);
@@ -121,7 +124,7 @@ private:
   Weights weights_;
   Bounds bounds_;
   double d_intake_ = 0.25; // Distance from center to intake point
-  double fk_ = 0.3; // Friction coefficient for drift model
+  double fk_ = 0.3;        // Friction coefficient for drift model
 
   // Trajectory storage (stack-allocated for speed)
   double x_[N + 1];
@@ -167,15 +170,13 @@ private:
   void backwardPass();
   double computeCost();
   void computeDynamics(int k);
-  void computeCostDerivatives(int k, bool is_terminal,
-                              double *lx, double *lu,
-                              double lxx[NX][NX],
-                              double luu[NU][NU],
+  void computeCostDerivatives(int k, bool is_terminal, double *lx, double *lu,
+                              double lxx[NX][NX], double luu[NU][NU],
                               double lux[NU][NX]);
-  void saturateControl(Control &u);      // Clamp vs only
-  void normalizeWheelSpeeds(Control &u);  // Scale v,w to respect wheel speed limits
+  void saturateControl(Control &u); // Clamp vs only
+  void
+  normalizeWheelSpeeds(Control &u); // Scale v,w to respect wheel speed limits
 
   // Drift model helper
   double computeDriftModel(double vy, double v, double w) const;
-
 };

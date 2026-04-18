@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -142,7 +143,8 @@
             color: var(--text-secondary);
         }
 
-        ul, ol {
+        ul,
+        ol {
             margin: 15px 0;
             padding-left: 30px;
             color: var(--text-secondary);
@@ -180,12 +182,30 @@
         }
 
         /* Code Syntax Highlighting */
-        .keyword { color: var(--accent-purple); }
-        .type { color: var(--accent-blue); }
-        .function { color: var(--accent-orange); }
-        .string { color: var(--accent-green); }
-        .comment { color: var(--text-secondary); font-style: italic; }
-        .number { color: var(--accent-orange); }
+        .keyword {
+            color: var(--accent-purple);
+        }
+
+        .type {
+            color: var(--accent-blue);
+        }
+
+        .function {
+            color: var(--accent-orange);
+        }
+
+        .string {
+            color: var(--accent-green);
+        }
+
+        .comment {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .number {
+            color: var(--accent-orange);
+        }
 
         /* Info Boxes */
         .info-box {
@@ -220,7 +240,8 @@
             margin: 20px 0;
         }
 
-        th, td {
+        th,
+        td {
             padding: 12px 15px;
             text-align: left;
             border: 1px solid var(--border-color);
@@ -342,12 +363,14 @@
             .sidebar {
                 display: none;
             }
+
             .main-content {
                 padding: 20px;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <nav class="sidebar">
@@ -379,7 +402,7 @@
             <div class="nav-section">
                 <div class="nav-section-title">Motion Control</div>
                 <a href="#move-to-point" class="nav-link">Move to Point</a>
-                <a href="#mpcc" class="nav-link">MPC Path Following</a>
+                <a href="#ilqr" class="nav-link">iLQR Path Following</a>
                 <a href="#path-planner" class="nav-link">Path Planner</a>
             </div>
 
@@ -394,7 +417,9 @@
         <main class="main-content">
             <section id="overview">
                 <h1>VEX V5 Motion Control System</h1>
-                <p>A sophisticated robotics control stack for VEX V5 featuring model-based control, sensor fusion, and optimal path following. This system implements a complete pipeline from low-level motor control to high-level trajectory planning using Model Predictive Contouring Control (MPCC).</p>
+                <p>A sophisticated robotics control stack for VEX V5 featuring model-based control, sensor fusion, and
+                    optimal path following. This system implements a complete pipeline from low-level motor control to
+                    high-level trajectory planning using iterative Linear Quadratic Regulator (iLQR).</p>
 
                 <div class="card-grid">
                     <div class="card">
@@ -406,8 +431,8 @@
                         <p>Sensor fusion for velocity estimation and global localization.</p>
                     </div>
                     <div class="card">
-                        <h3>MPCC Path Following</h3>
-                        <p>Model Predictive Contouring Control with acados solver.</p>
+                        <h3>iLQR Path Following</h3>
+                        <p>Hand-written iterative LQR controller for optimal trajectory tracking.</p>
                     </div>
                     <div class="card">
                         <h3>Auto-Tuning</h3>
@@ -417,10 +442,14 @@
 
                 <h3>Key Features</h3>
                 <ul>
-                    <li><strong>Physics-Based Dynamics:</strong> Motor model with resistance, torque constant, back-EMF, and Coulomb friction</li>
-                    <li><strong>Real-Time Estimation:</strong> Extended Kalman Filter for velocity, NEON-optimized Particle Filter for position</li>
-                    <li><strong>Sliding Mode Control:</strong> Super-twisting algorithm with integral action for robust tracking</li>
-                    <li><strong>Optimal Control:</strong> MPCC with 20-step horizon, curvature-aware velocity adaptation</li>
+                    <li><strong>Physics-Based Dynamics:</strong> Motor model with resistance, torque constant, back-EMF,
+                        and Coulomb friction</li>
+                    <li><strong>Real-Time Estimation:</strong> Extended Kalman Filter for velocity, NEON-optimized
+                        Particle Filter for position</li>
+                    <li><strong>Sliding Mode Control:</strong> Super-twisting algorithm with integral action for robust
+                        tracking</li>
+                    <li><strong>Optimal Control:</strong> iLQR with 50-step horizon (1 second), drift model, and wheel
+                        speed constraints</li>
                     <li><strong>Fast Development:</strong> Hot/cold linking for sub-second upload cycles</li>
                 </ul>
             </section>
@@ -457,7 +486,8 @@
                 <h3>Coordinate Conventions</h3>
                 <div class="info-box">
                     <h4>Compass Heading System</h4>
-                    <p>The system uses compass convention: <strong>theta = 0 is North (+Y)</strong>, rotating <strong>CW positive</strong>. This affects all heading calculations and sensor transformations.</p>
+                    <p>The system uses compass convention: <strong>theta = 0 is North (+Y)</strong>, rotating <strong>CW
+                            positive</strong>. This affects all heading calculations and sensor transformations.</p>
                     <ul>
                         <li>X: East direction</li>
                         <li>Y: North direction</li>
@@ -467,17 +497,14 @@
             </section>
 
             <section id="build-system">
-            <section id="chassis-setup">
-                <h2>Chassis Setup</h2>
-<div style="text-align: center; margin: 20px 0;">
-  <img src="chassis_coordinates.png" alt="Chassis Coordinate System Diagram" style="max-width: 100%; height: auto; border: 1px solid #d1d9e0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1;">
-</div>
+                <section id="chassis-setup">
+                    <h2>Chassis Setup</h2>
 
 
-                <h3>Hardware Configuration</h3>
-                <p>Configure your robot in <code>main.cpp</code>:</p>
+                    <h3>Hardware Configuration</h3>
+                    <p>Configure your robot in <code>main.cpp</code>:</p>
 
-                <pre><code>// Motor ports (negative = reversed)
+                    <pre><code>// Motor ports (negative = reversed)
 std::vector&lt;int&gt; LEFT_MOTOR_PORTS = {11, 13};
 std::vector&lt;int&gt; RIGHT_MOTOR_PORTS = {-12, -1};
 
@@ -494,8 +521,8 @@ double TRACK_WIDTH = 11.5;          // inches (wheel-to-wheel)
 
 pros::v5::MotorGears CARTRIDGE = pros::v5::MotorGears::green;</code></pre>
 
-                <h3>Chassis Class Initialization</h3>
-                <pre><code>Chassis chassis(
+                    <h3>Chassis Class Initialization</h3>
+                    <pre><code>Chassis chassis(
     LEFT_MOTOR_PORTS,
     RIGHT_MOTOR_PORTS,
     IMU_PORTS,
@@ -507,49 +534,49 @@ pros::v5::MotorGears CARTRIDGE = pros::v5::MotorGears::green;</code></pre>
     EKFConfig{...}
 );</code></pre>
 
-                <h3>Motor Parameters Structure</h3>
-                <p>The <code>MotorParams</code> struct defines motor physics:</p>
-                <table>
-                    <tr>
-                        <th>Parameter</th>
-                        <th>Description</th>
-                        <th>Units</th>
-                    </tr>
-                    <tr>
-                        <td>R</td>
-                        <td>Motor resistance</td>
-                        <td>Ohms</td>
-                    </tr>
-                    <tr>
-                        <td>Kt</td>
-                        <td>Torque constant</td>
-                        <td>N*m/A</td>
-                    </tr>
-                    <tr>
-                        <td>Ke</td>
-                        <td>Back-EMF constant</td>
-                        <td>V*s/rad</td>
-                    </tr>
-                    <tr>
-                        <td>Kv</td>
-                        <td>Velocity constant (= 1/Ke)</td>
-                        <td>rad/s/V</td>
-                    </tr>
-                    <tr>
-                        <td>Imax</td>
-                        <td>Current limit</td>
-                        <td>Amperes</td>
-                    </tr>
-                    <tr>
-                        <td>Vmax</td>
-                        <td>Voltage limit</td>
-                        <td>Volts</td>
-                    </tr>
-                </table>
+                    <h3>Motor Parameters Structure</h3>
+                    <p>The <code>MotorParams</code> struct defines motor physics:</p>
+                    <table>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Description</th>
+                            <th>Units</th>
+                        </tr>
+                        <tr>
+                            <td>R</td>
+                            <td>Motor resistance</td>
+                            <td>Ohms</td>
+                        </tr>
+                        <tr>
+                            <td>Kt</td>
+                            <td>Torque constant</td>
+                            <td>N*m/A</td>
+                        </tr>
+                        <tr>
+                            <td>Ke</td>
+                            <td>Back-EMF constant</td>
+                            <td>V*s/rad</td>
+                        </tr>
+                        <tr>
+                            <td>Kv</td>
+                            <td>Velocity constant (= 1/Ke)</td>
+                            <td>rad/s/V</td>
+                        </tr>
+                        <tr>
+                            <td>Imax</td>
+                            <td>Current limit</td>
+                            <td>Amperes</td>
+                        </tr>
+                        <tr>
+                            <td>Vmax</td>
+                            <td>Voltage limit</td>
+                            <td>Volts</td>
+                        </tr>
+                    </table>
 
-                <h3>GainsFG Structure</h3>
-                <p>Forward/Gains model parameters from system identification:</p>
-                <pre><code>struct GainsFG {
+                    <h3>GainsFG Structure</h3>
+                    <p>Forward/Gains model parameters from system identification:</p>
+                    <pre><code>struct GainsFG {
     double alpha_v;      // m/s^2 per Volt (linear acceleration gain)
     double alpha_w;      // rad/s^2 per Volt (angular acceleration gain)
     double lambda_v;     // 1/s (linear drag coefficient)
@@ -560,9 +587,9 @@ pros::v5::MotorGears CARTRIDGE = pros::v5::MotorGears::green;</code></pre>
     double kS_w;         // Volts (Coulomb friction - angular/scrub)
 };</code></pre>
 
-                <div class="info-box">
-                    <h4>Setting Gains</h4>
-                    <pre><code>chassis.set_gains({
+                    <div class="info-box">
+                        <h4>Setting Gains</h4>
+                        <pre><code>chassis.set_gains({
     .alpha_v = 2.36,
     .alpha_w = 17.80,
     .lambda_v = 20.0,
@@ -572,25 +599,26 @@ pros::v5::MotorGears CARTRIDGE = pros::v5::MotorGears::green;</code></pre>
     .kS_v = 1.21,
     .kS_w = 1.93,
 });</code></pre>
-                </div>
-            </section>
+                    </div>
+                </section>
 
-            <section id="velocity-ekf">
-                <h2>Velocity EKF</h2>
+                <section id="velocity-ekf">
+                    <h2>Velocity EKF</h2>
 
-                <p>The Extended Kalman Filter estimates linear (v) and angular (ω) velocity from encoders and IMU. It provides robust estimates even during wheel slip or stall conditions.</p>
+                    <p>The Extended Kalman Filter estimates linear (v) and angular (ω) velocity from encoders and IMU.
+                        It provides robust estimates even during wheel slip or stall conditions.</p>
 
-                <h3>State Model</h3>
-                <div class="formula">
-                    x = [v, ω]<sup>T</sup> &nbsp;&nbsp;(linear and angular velocity)
-                </div>
+                    <h3>State Model</h3>
+                    <div class="formula">
+                        x = [v, ω]<sup>T</sup> &nbsp;&nbsp;(linear and angular velocity)
+                    </div>
 
-                <div class="formula">
-                    dx/dt = F·x + G·u &nbsp;&nbsp;where F = [-λ<sub>v</sub>, 0; 0, -λ<sub>w</sub>]
-                </div>
+                    <div class="formula">
+                        dx/dt = F·x + G·u &nbsp;&nbsp;where F = [-λ<sub>v</sub>, 0; 0, -λ<sub>w</sub>]
+                    </div>
 
-                <h3>EKF Configuration</h3>
-                <pre><code>struct EKFConfig {
+                    <h3>EKF Configuration</h3>
+                    <pre><code>struct EKFConfig {
     double Q_v = 0.05;      // Process noise (linear)
     double Q_w = 0.05;      // Process noise (angular)
     double R_v_enc = 0.02;  // Encoder measurement noise (linear)
@@ -599,35 +627,39 @@ pros::v5::MotorGears CARTRIDGE = pros::v5::MotorGears::green;</code></pre>
     double slip_tolerance = 9.0; // Mahalanobis threshold
 };</code></pre>
 
-                <h3>Slip/Stall Protection</h3>
-                <p>The EKF includes automatic slip detection:</p>
-                <ol>
-                    <li><strong>Wheel Spin-out:</strong> Clamps encoder velocities to physically possible accelerations</li>
-                    <li><strong>Stall Detection:</strong> Bypasses voltage model when encoders show near-zero but voltage predicts fast motion</li>
-                    <li><strong>Model Override:</strong> Uses simple decay model during detected slip events</li>
-                </ol>
+                    <h3>Slip/Stall Protection</h3>
+                    <p>The EKF includes automatic slip detection:</p>
+                    <ol>
+                        <li><strong>Wheel Spin-out:</strong> Clamps encoder velocities to physically possible
+                            accelerations</li>
+                        <li><strong>Stall Detection:</strong> Bypasses voltage model when encoders show near-zero but
+                            voltage predicts fast motion</li>
+                        <li><strong>Model Override:</strong> Uses simple decay model during detected slip events</li>
+                    </ol>
 
-                <div class="info-box success">
-                    <h4>Measurement Update Order</h4>
-                    <p>Updates are applied sequentially: IMU angular velocity → Encoder angular velocity → Encoder linear velocity. This ordering prioritizes the IMU for angular estimation.</p>
-                </div>
+                    <div class="info-box success">
+                        <h4>Measurement Update Order</h4>
+                        <p>Updates are applied sequentially: IMU angular velocity → Encoder angular velocity → Encoder
+                            linear velocity. This ordering prioritizes the IMU for angular estimation.</p>
+                    </div>
 
-                <h3>Accessing Estimates</h3>
-                <pre><code>double v_ms = chassis.get_linear_velocity();  // m/s
+                    <h3>Accessing Estimates</h3>
+                    <pre><code>double v_ms = chassis.get_linear_velocity();  // m/s
 double w_rads = chassis.get_angular_velocity(); // rad/s (CW positive)
 
 // Wheel velocities (in/s, useful for PF)
 double vl_ins = chassis.get_left_velocity();
 double vr_ins = chassis.get_right_velocity();</code></pre>
-            </section>
+                </section>
 
-            <section id="particle-filter">
-                <h2>Particle Filter Localization</h2>
+                <section id="particle-filter">
+                    <h2>Particle Filter Localization</h2>
 
-                <p>The Particle Filter provides global localization using distance sensors and odometry. It uses Monte Carlo localization with NEON SIMD optimizations for real-time performance.</p>
+                    <p>The Particle Filter provides global localization using distance sensors and odometry. It uses
+                        Monte Carlo localization with NEON SIMD optimizations for real-time performance.</p>
 
-                <h3>Configuration</h3>
-                <pre><code>struct PFConfig {
+                    <h3>Configuration</h3>
+                    <pre><code>struct PFConfig {
     float distance_sensor_stddev = 0.83f;      // Sensor noise (inches)
     float motion_distance_stddev = 0.001f;     // Odometry slip noise
     float kinetic_friction = 68.0f;            // Drift model friction
@@ -640,91 +672,101 @@ double vr_ins = chassis.get_right_velocity();</code></pre>
 };</code></pre>
 
 
-<h3>Detailed PFConfig Parameter Guide</h3>
-<p>Each PFConfig parameter controls a specific aspect of the particle filter behavior. Proper tuning is critical for optimal localization performance.</p>
+                    <h3>Detailed PFConfig Parameter Guide</h3>
+                    <p>Each PFConfig parameter controls a specific aspect of the particle filter behavior. Proper tuning
+                        is critical for optimal localization performance.</p>
 
-<h4>Measurement Model Parameters</h4>
-<table>
-<tr>
-    <th>Parameter</th>
-    <th>Description</th>
-    <th>Tuning Guidance</th>
-</tr>
-<tr>
-    <td><code>distance_sensor_stddev</code></td>
-    <td>Standard deviation of distance sensor noise in inches. This represents how much you trust your distance sensors.</td>
-    <td>
-        <strong>Low values (0.1-0.5):</strong> Trust sensors heavily - good for accurate sensors in simple environments<br>
-        <strong>High values (1.0-2.0):</strong> Distrust sensors - good for noisy sensors or complex environments<br>
-        <strong>Typical value:</strong> 0.83" (VEX ultrasonic sensors)
-    </td>
-</tr>
-</table>
+                    <h4>Measurement Model Parameters</h4>
+                    <table>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Description</th>
+                            <th>Tuning Guidance</th>
+                        </tr>
+                        <tr>
+                            <td><code>distance_sensor_stddev</code></td>
+                            <td>Standard deviation of distance sensor noise in inches. This represents how much you
+                                trust your distance sensors.</td>
+                            <td>
+                                <strong>Low values (0.1-0.5):</strong> Trust sensors heavily - good for accurate sensors
+                                in simple environments<br>
+                                <strong>High values (1.0-2.0):</strong> Distrust sensors - good for noisy sensors or
+                                complex environments<br>
+                                <strong>Typical value:</strong> 0.83" (VEX ultrasonic sensors)
+                            </td>
+                        </tr>
+                    </table>
 
-<h4>Motion Model Parameters</h4>
-<table>
-<tr>
-    <th>Parameter</th>
-    <th>Description</th>
-    <th>Tuning Guidance</th>
-</tr>
-<tr>
-    <td><code>motion_distance_stddev</code></td>
-    <td>Standard deviation of forward/backward motion in inches. Models how much your robot slips when driving straight.</td>
-    <td>
-        <strong>Low values (0.0001-0.001):</strong> Very precise motion - good for tank treads, low acceleration<br>
-        <strong>High values (0.01-0.1):</strong> Slippery motion - good for Mecanum wheels, high acceleration<br>
-        <strong>Start with:</strong> 0.001, increase if seeing tracking loss during fast maneuvers
-    </td>
-</tr>
-<tr>
-    <td><code>motion_heading_stddev</code></td>
-    <td>Standard deviation of heading change in radians. Models how much error accumulates in rotation.</td>
-    <td>
-        <strong>Low values (0.0001-0.001):</strong> Precise rotation - good for high-quality IMU, low wheel slip<br>
-        <strong>High values (0.01-0.1):</strong> Uncertain rotation - good for wheel slip, poor IMU<br>
-        <strong>Typical value:</strong> 0.001
-    </td>
-</tr>
-</table>
+                    <h4>Motion Model Parameters</h4>
+                    <table>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Description</th>
+                            <th>Tuning Guidance</th>
+                        </tr>
+                        <tr>
+                            <td><code>motion_distance_stddev</code></td>
+                            <td>Standard deviation of forward/backward motion in inches. Models how much your robot
+                                slips when driving straight.</td>
+                            <td>
+                                <strong>Low values (0.0001-0.001):</strong> Very precise motion - good for tank treads,
+                                low acceleration<br>
+                                <strong>High values (0.01-0.1):</strong> Slippery motion - good for Mecanum wheels, high
+                                acceleration<br>
+                                <strong>Start with:</strong> 0.001, increase if seeing tracking loss during fast
+                                maneuvers
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code>motion_heading_stddev</code></td>
+                            <td>Standard deviation of heading change in radians. Models how much error accumulates in
+                                rotation.</td>
+                            <td>
+                                <strong>Low values (0.0001-0.001):</strong> Precise rotation - good for high-quality
+                                IMU, low wheel slip<br>
+                                <strong>High values (0.01-0.1):</strong> Uncertain rotation - good for wheel slip, poor
+                                IMU<br>
+                                <strong>Typical value:</strong> 0.001
+                            </td>
+                        </tr>
+                    </table>
 
-<h4>Drift Model Parameters</h4>
+                    <h4>Drift Model Parameters</h4>
 
 
-<h4>Drift Model Parameters</h4>
-<table>
-<tr>
-    <th>Parameter</th>
-    <th>Description</th>
-    <th>Tuning Guidance</th>
-</tr>
-<tr>
-    <td><code>kinetic_friction</code></td>
-    <td>Kinetic friction coefficient for lateral drift velocity decay. Higher values = less drift.</td>
-    <td>
-<strong>Low values (20-40):</strong> High drift - good for Mecanum or omni wheels<br>
-<strong>High values (80-120):</strong> Low drift - good for tank drive<br>
-<strong>Tuning method:</strong> Run the friction tuning script in optimize_friction.py
-    </td>
-</tr>
-<tr>
-    <td><code>max_drift_speed</code></td>
-    <td>Maximum lateral drift velocity the model can produce in inches/second.</td>
-    <td>
-<strong>Low values (10-20):</strong> Minimal drift - good for tank drive<br>
-<strong>High values (40-60):</strong> High drift potential - good for Mecanum<br>
-<strong>Tuning method:</strong> Observe actual drift during sideways motion, set 2x the observed max
-    </td>
-</tr>
-</table>
+                    <h4>Drift Model Parameters</h4>
+                    <table>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Description</th>
+                            <th>Tuning Guidance</th>
+                        </tr>
+                        <tr>
+                            <td><code>kinetic_friction</code></td>
+                            <td>Kinetic friction coefficient for lateral drift velocity decay. Higher values = less
+                                drift.</td>
+                            <td>
+                                <strong>Low values (20-40):</strong> High drift - good for Mecanum or omni wheels<br>
+                                <strong>High values (80-120):</strong> Low drift - good for tank drive<br>
+                                <strong>Tuning method:</strong> Run the friction tuning script in optimize_friction.py
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code>max_drift_speed</code></td>
+                            <td>Maximum lateral drift velocity the model can produce in inches/second.</td>
+                            <td>
+                                <strong>Low values (10-20):</strong> Minimal drift - good for tank drive<br>
+                                <strong>High values (40-60):</strong> High drift potential - good for Mecanum<br>
+                                <strong>Tuning method:</strong> Observe actual drift during sideways motion, set 2x the
+                                observed max
+                            </td>
+                        </tr>
+                    </table>
 
-<h3>Sensor Configuration Diagram</h3>
-<div style="text-align: center; margin: 20px 0;">
-  <img src="sensor_config.png" alt="Sensor Configuration Diagram" style="max-width: 100%; height: auto; border: 1px solid #d1d9e0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-</div>
+                    <h3>Sensor Configuration Diagram</h3>
 
-<h3>Setup and Map</h3>
-<pre><code>// Initialize with 500 particles
+                    <h3>Setup and Map</h3>
+                    <pre><code>// Initialize with 500 particles
 ParticleFilter pf(500, sensor_configs, pfc,
     start_x, start_y, start_theta);
 
@@ -737,14 +779,15 @@ std::vector&lt;MapSegment&gt; segs = {
 };
 pf.set_map(segs);</code></pre>
 
-<h3>Drift Model</h3>
-<p>The particle filter includes a kinetic friction drift model for lateral velocity:</p>
-<div class="formula">
-v<sub>y</sub><sup>+</sup> = v<sub>y</sub> - clamp(v*w*dt, -f<sub>k</sub>*dt, +f<sub>k</sub>*dt) - sign(v<sub>y</sub>)*f<sub>k</sub>*dt
-</div>
+                    <h3>Drift Model</h3>
+                    <p>The particle filter includes a kinetic friction drift model for lateral velocity:</p>
+                    <div class="formula">
+                        v<sub>y</sub><sup>+</sup> = v<sub>y</sub> - clamp(v*w*dt, -f<sub>k</sub>*dt, +f<sub>k</sub>*dt)
+                        - sign(v<sub>y</sub>)*f<sub>k</sub>*dt
+                    </div>
 
-<h3>Update Loop</h3>
-<pre><code>// In your main loop (10-20ms):
+                    <h3>Update Loop</h3>
+                    <pre><code>// In your main loop (10-20ms):
 float curr_heading = chassis.get_rotation() * DEG_TO_RAD;
 std::vector&lt;float&gt; readings = chassis.get_distance_readings();
 
@@ -760,8 +803,8 @@ pf.update(
 Estimate est = pf.estimate();
 // est.x, est.y (inches), est.theta_deg (degrees), est.lateral (in/s)</code></pre>
 
-<h3>Sensor Configuration</h3>
-<pre><code>struct SensorConfig {
+                    <h3>Sensor Configuration</h3>
+                    <pre><code>struct SensorConfig {
     float dx, dy; // Mounting offset from COM (inches)
     float angle; // Sensor facing angle (degrees, compass convention)
 };
@@ -771,153 +814,187 @@ std::vector&lt;SensorConfig&gt; sensors = {
     {-5.0, 0.0, 180.0}, // Back sensor
 };</code></pre>
 
-<div class="info-box">
-<h4>NEON Optimization</h4>
-<p>The particle filter processes 4 particles simultaneously using ARM NEON SIMD. Key optimizations include vectorized sin/cos approximation and fast ray-segment intersection with spatial grid culling.</p>
-</div>
-</section>
-<table>
-<tr>
-    <th>Parameter</th>
-    <th>Description</th>
-    <th>Tuning Guidance</th>
-</tr>
-<tr>
-    <td><code>kinetic_friction</code></td>
-    <td>Kinetic friction coefficient for lateral drift velocity decay. Higher values = less drift.</td>
-    <td>
-        <strong>Low values (20-40):</strong> High drift - good for Mecanum or omni wheels<br>
-        <strong>High values (80-120):</strong> Low drift - good for tank drive<br>
-        <strong>Tuning method:</strong> Run the friction tuning script in optimize_friction.py
-    </td>
-</tr>
-<tr>
-    <td><code>max_drift_speed</code></td>
-    <td>Maximum lateral drift velocity the model can produce in inches/second.</td>
-    <td>
-        <strong>Low values (10-20):</strong> Minimal drift - good for tank drive<br>
-        <strong>High values (40-60):</strong> High drift potential - good for Mecanum<br>
-        <strong>Tuning method:</strong> Observe actual drift during sideways motion, set 2x the observed max
-    </td>
-</tr>
-</table>
+                    <div class="info-box">
+                        <h4>NEON Optimization</h4>
+                        <p>The particle filter processes 4 particles simultaneously using ARM NEON SIMD. Key
+                            optimizations include vectorized sin/cos approximation and fast ray-segment intersection
+                            with spatial grid culling.</p>
+                    </div>
+                </section>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Description</th>
+                        <th>Tuning Guidance</th>
+                    </tr>
+                    <tr>
+                        <td><code>kinetic_friction</code></td>
+                        <td>Kinetic friction coefficient for lateral drift velocity decay. Higher values = less drift.
+                        </td>
+                        <td>
+                            <strong>Low values (20-40):</strong> High drift - good for Mecanum or omni wheels<br>
+                            <strong>High values (80-120):</strong> Low drift - good for tank drive<br>
+                            <strong>Tuning method:</strong> Run the friction tuning script in optimize_friction.py
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>max_drift_speed</code></td>
+                        <td>Maximum lateral drift velocity the model can produce in inches/second.</td>
+                        <td>
+                            <strong>Low values (10-20):</strong> Minimal drift - good for tank drive<br>
+                            <strong>High values (40-60):</strong> High drift potential - good for Mecanum<br>
+                            <strong>Tuning method:</strong> Observe actual drift during sideways motion, set 2x the
+                            observed max
+                        </td>
+                    </tr>
+                </table>
 
-<h4>Resampling Parameters</h4>
-<table>
-<tr>
-    <th>Parameter</th>
-    <th>Description</th>
-    <th>Tuning Guidance</th>
-</tr>
-<tr>
-    <td><code>resampling_threshold</code></td>
-    <td>Distance traveled (inches) before triggering particle resampling. Controls how often particles are regenerated.</td>
-    <td>
-        <strong>Low values (0.1-0.5):</strong> Frequent resampling - keeps particles fresh, but can lose diversity<br>
-        <strong>High values (1.0-3.0):</strong> Infrequent resampling - maintains particle diversity longer<br>
-        <strong>Typical value:</strong> 0.5" (resample every 0.5 inches of travel)
-    </td>
-</tr>
-<tr>
-    <td><code>max_time_before_resample</code></td>
-    <td>Time elapsed (seconds) before triggering resampling. Safety measure for when robot is stationary.</td>
-    <td>
-        <strong>Low values (0.01-0.05):</strong> Quick timeout - resample frequently even when stationary<br>
-        <strong>High values (0.1-0.5):</strong> Slow timeout - allow particles to converge when stationary<br>
-        <strong>Typical value:</strong> 0.05s (50ms)
-    </td>
-</tr>
-</table>
+                <h4>Resampling Parameters</h4>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Description</th>
+                        <th>Tuning Guidance</th>
+                    </tr>
+                    <tr>
+                        <td><code>resampling_threshold</code></td>
+                        <td>Distance traveled (inches) before triggering particle resampling. Controls how often
+                            particles are regenerated.</td>
+                        <td>
+                            <strong>Low values (0.1-0.5):</strong> Frequent resampling - keeps particles fresh, but can
+                            lose diversity<br>
+                            <strong>High values (1.0-3.0):</strong> Infrequent resampling - maintains particle diversity
+                            longer<br>
+                            <strong>Typical value:</strong> 0.5" (resample every 0.5 inches of travel)
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>max_time_before_resample</code></td>
+                        <td>Time elapsed (seconds) before triggering resampling. Safety measure for when robot is
+                            stationary.</td>
+                        <td>
+                            <strong>Low values (0.01-0.05):</strong> Quick timeout - resample frequently even when
+                            stationary<br>
+                            <strong>High values (0.1-0.5):</strong> Slow timeout - allow particles to converge when
+                            stationary<br>
+                            <strong>Typical value:</strong> 0.05s (50ms)
+                        </td>
+                    </tr>
+                </table>
 
-<h4>Degeneracy Detection Parameters</h4>
-<table>
-<tr>
-<th>Parameter</th>
-<th>Description</th>
-<th>Tuning Guidance</th>
-</tr>
-<tr>
-<td><code>ess_threshold</code></td>
-<td>Effective Sample Size threshold as a fraction of total particles. ESS measures how many particles actively contribute to the estimate.</td>
-<td>
-<strong>Low values (0.3):</strong> Allow more degeneracy before forced resample<br>
-<strong>High values (0.7):</strong> Resample earlier when particles converge<br>
-<strong>Typical value:</strong> 0.5 (resample when ESS drops below half of particles)
-</td>
-</tr>
-<tr>
-<td><code>degeneracy_timeout</code></td>
-<td>Time (seconds) to wait before forcing a resample when ESS is below threshold.</td>
-<td>
-<strong>Low values (0.1-0.2):</strong> Quick recovery from degeneracy<br>
-<strong>High values (0.5-1.0):</strong> Allow more time for natural recovery<br>
-<strong>Typical value:</strong> 0.3s (300ms timeout)
-</td>
-</tr>
-</table>
+                <h4>Degeneracy Detection Parameters</h4>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Description</th>
+                        <th>Tuning Guidance</th>
+                    </tr>
+                    <tr>
+                        <td><code>ess_threshold</code></td>
+                        <td>Effective Sample Size threshold as a fraction of total particles. ESS measures how many
+                            particles actively contribute to the estimate.</td>
+                        <td>
+                            <strong>Low values (0.3):</strong> Allow more degeneracy before forced resample<br>
+                            <strong>High values (0.7):</strong> Resample earlier when particles converge<br>
+                            <strong>Typical value:</strong> 0.5 (resample when ESS drops below half of particles)
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>degeneracy_timeout</code></td>
+                        <td>Time (seconds) to wait before forcing a resample when ESS is below threshold.</td>
+                        <td>
+                            <strong>Low values (0.1-0.2):</strong> Quick recovery from degeneracy<br>
+                            <strong>High values (0.5-1.0):</strong> Allow more time for natural recovery<br>
+                            <strong>Typical value:</strong> 0.3s (300ms timeout)
+                        </td>
+                    </tr>
+                </table>
 
-<div class="info-box">
-<h4>What is Particle Degeneracy?</h4>
-<p>When sensor measurements strongly favor certain particles, their weights become dominant while others shrink. This reduces the Effective Sample Size (ESS). A low ESS means:</p>
-<ul>
-<li>Only a few particles contribute to the estimate</li>
-<li>The filter becomes overconfident in a single hypothesis</li>
-<li>Recovery from tracking errors becomes difficult</li>
-</ul>
-<p>The degeneracy detection forces a resample when ESS stays low for too long, ensuring the filter maintains particle diversity and can recover from tracking errors.</p>
-</div>
+                <div class="info-box">
+                    <h4>What is Particle Degeneracy?</h4>
+                    <p>When sensor measurements strongly favor certain particles, their weights become dominant while
+                        others shrink. This reduces the Effective Sample Size (ESS). A low ESS means:</p>
+                    <ul>
+                        <li>Only a few particles contribute to the estimate</li>
+                        <li>The filter becomes overconfident in a single hypothesis</li>
+                        <li>Recovery from tracking errors becomes difficult</li>
+                    </ul>
+                    <p>The degeneracy detection forces a resample when ESS stays low for too long, ensuring the filter
+                        maintains particle diversity and can recover from tracking errors.</p>
+                </div>
 
-<h4>Particle Injection Parameters</h4>
-<table>
-<tr>
-    <th>Parameter</th>
-    <th>Description</th>
-    <th>Tuning Guidance</th>
-</tr>
-<tr>
-    <td><code>uniform_noise_probability</code></td>
-    <td>Probability of injecting uniform random noise during measurement updates. Helps recover from kidnapping/reset.</td>
-    <td>
-        <strong>Low values (0.001-0.01):</strong> Conservative - rare random jumps<br>
-        <strong>High values (0.05-0.1):</strong> Aggressive - frequent random jumps, can destabilize tracking<br>
-        <strong>Typical value:</strong> 0.0127 (1.27%)
-    </td>
-</tr>
-<tr>
-    <td><code>random_particle_probability</code></td>
-    <td>Probability of injecting completely random particles during resampling. Helps escape local minima.</td>
-    <td>
-        <strong>Low values (0.001-0.005):</strong> Rare random particles<br>
-        <strong>High values (0.01-0.05):</strong> More random particles, reduces tracking stability<br>
-        <strong>Typical value:</strong> 0.005 (0.5%)
-    </td>
-</tr>
-</table>
+                <h4>Particle Injection Parameters</h4>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Description</th>
+                        <th>Tuning Guidance</th>
+                    </tr>
+                    <tr>
+                        <td><code>uniform_noise_probability</code></td>
+                        <td>Probability of injecting uniform random noise during measurement updates. Helps recover from
+                            kidnapping/reset.</td>
+                        <td>
+                            <strong>Low values (0.001-0.01):</strong> Conservative - rare random jumps<br>
+                            <strong>High values (0.05-0.1):</strong> Aggressive - frequent random jumps, can destabilize
+                            tracking<br>
+                            <strong>Typical value:</strong> 0.0127 (1.27%)
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>random_particle_probability</code></td>
+                        <td>Probability of injecting completely random particles during resampling. Helps escape local
+                            minima.</td>
+                        <td>
+                            <strong>Low values (0.001-0.005):</strong> Rare random particles<br>
+                            <strong>High values (0.01-0.05):</strong> More random particles, reduces tracking
+                            stability<br>
+                            <strong>Typical value:</strong> 0.005 (0.5%)
+                        </td>
+                    </tr>
+                </table>
 
-<h3>Particle Filter Tuning Process</h3>
-<ol>
-    <li><strong>Start with reliable odometry:</strong> Before tuning the particle filter, ensure your chassis velocity EKF is well-tuned. Poor odometry inputs will make the PF underperform no matter what.</li>
+                <h3>Particle Filter Tuning Process</h3>
+                <ol>
+                    <li><strong>Start with reliable odometry:</strong> Before tuning the particle filter, ensure your
+                        chassis velocity EKF is well-tuned. Poor odometry inputs will make the PF underperform no matter
+                        what.</li>
 
-    <li><strong>Disable all random injections:</strong> Set <code>uniform_noise_probability = 0</code> and <code>random_particle_probability = 0</code> to observe clean behavior.</li>
+                    <li><strong>Disable all random injections:</strong> Set <code>uniform_noise_probability = 0</code>
+                        and <code>random_particle_probability = 0</code> to observe clean behavior.</li>
 
-    <li><strong>Tune motion model first:</strong> Drive your robot around and watch the particle cloud. If particles spread too much, increase <code>motion_distance_stddev</code> and <code>motion_heading_stddev</code>. If particles converge too quickly (lose diversity and get stuck), decrease them.</li>
+                    <li><strong>Tune motion model first:</strong> Drive your robot around and watch the particle cloud.
+                        If particles spread too much, increase <code>motion_distance_stddev</code> and
+                        <code>motion_heading_stddev</code>. If particles converge too quickly (lose diversity and get
+                        stuck), decrease them.</li>
 
-    <li><strong>Add sensor model:</strong> With distance sensors enabled, adjust <code>distance_sensor_stddev</code>. Too low = particles too confident, may diverge. Too high = sensor data has minimal effect.</li>
+                    <li><strong>Add sensor model:</strong> With distance sensors enabled, adjust
+                        <code>distance_sensor_stddev</code>. Too low = particles too confident, may diverge. Too high =
+                        sensor data has minimal effect.</li>
 
-    <li><strong>Calibrate drift:</strong> For robots that experience significant lateral drift (Mecanum, omni), set <code>kinetic_friction</code> and <code>max_drift_speed</code> using the provided tuning scripts.</li>
+                    <li><strong>Calibrate drift:</strong> For robots that experience significant lateral drift (Mecanum,
+                        omni), set <code>kinetic_friction</code> and <code>max_drift_speed</code> using the provided
+                        tuning scripts.</li>
 
-    <li><strong>Add randomization back:</strong> Slowly increase <code>uniform_noise_probability</code> and <code>random_particle_probability</code> until the filter can recover from being manually moved.</li>
+                    <li><strong>Add randomization back:</strong> Slowly increase <code>uniform_noise_probability</code>
+                        and <code>random_particle_probability</code> until the filter can recover from being manually
+                        moved.</li>
 
-    <li><strong>Adjust resampling:</strong> If you see particle depletion (all particles at same location), decrease <code>resampling_threshold</code>. If tracking is jittery, increase it.</li>
-</ol>
+                    <li><strong>Adjust resampling:</strong> If you see particle depletion (all particles at same
+                        location), decrease <code>resampling_threshold</code>. If tracking is jittery, increase it.</li>
+                </ol>
 
-<div class="info-box warning">
-<h4>Common Tuning Issues</h4>
-<p><strong>Particles converge too quickly:</strong> Lower <code>distance_sensor_stddev</code> or increase <code>motion_</code>stddev parameters</p>
-<p><strong>Particles never converge:</strong> Increase <code>distance_sensor_stddev</code> or decrease <code>motion_</code>stddev parameters</p>
-<p><strong>Tracking lost during turns:</strong> Increase <code>motion_heading_stddev</code> to allow more rotational uncertainty</p>
-<p><strong>Tracking lost during acceleration:</strong> Increase <code>motion_distance_stddev</code> to allow more linear uncertainty</p>
-</div>
+                <div class="info-box warning">
+                    <h4>Common Tuning Issues</h4>
+                    <p><strong>Particles converge too quickly:</strong> Lower <code>distance_sensor_stddev</code> or
+                        increase <code>motion_</code>stddev parameters</p>
+                    <p><strong>Particles never converge:</strong> Increase <code>distance_sensor_stddev</code> or
+                        decrease <code>motion_</code>stddev parameters</p>
+                    <p><strong>Tracking lost during turns:</strong> Increase <code>motion_heading_stddev</code> to allow
+                        more rotational uncertainty</p>
+                    <p><strong>Tracking lost during acceleration:</strong> Increase <code>motion_distance_stddev</code>
+                        to allow more linear uncertainty</p>
+                </div>
                 <h3>Setup and Map</h3>
                 <pre><code>// Initialize with 500 particles
 ParticleFilter pf(500, sensor_configs, pfc,
@@ -935,7 +1012,8 @@ pf.set_map(segs);</code></pre>
                 <h3>Drift Model</h3>
                 <p>The particle filter includes a kinetic friction drift model for lateral velocity:</p>
                 <div class="formula">
-                    v<sub>y</sub><sup>+</sup> = v<sub>y</sub> - clamp(v·ω·dt, -f<sub>k</sub>·dt, +f<sub>k</sub>·dt) - sign(v<sub>y</sub>)·f<sub>k</sub>·dt
+                    v<sub>y</sub><sup>+</sup> = v<sub>y</sub> - clamp(v·ω·dt, -f<sub>k</sub>·dt, +f<sub>k</sub>·dt) -
+                    sign(v<sub>y</sub>)·f<sub>k</sub>·dt
                 </div>
 
                 <h3>Update Loop</h3>
@@ -968,7 +1046,9 @@ std::vector&lt;SensorConfig&gt; sensors = {
 
                 <div class="info-box">
                     <h4>NEON Optimization</h4>
-                    <p>The particle filter processes 4 particles simultaneously using ARM NEON SIMD. Key optimizations include vectorized sin/cos approximation and fast ray-segment intersection with spatial grid culling.</p>
+                    <p>The particle filter processes 4 particles simultaneously using ARM NEON SIMD. Key optimizations
+                        include vectorized sin/cos approximation and fast ray-segment intersection with spatial grid
+                        culling.</p>
                 </div>
             </section>
 
@@ -1012,7 +1092,8 @@ run_angular_sysid(chassis);</code></pre>
                 </table>
 
                 <h3>Offline Fitting</h3>
-                <p>After collecting data (saved to SD card as <code>sysid_linear.csv</code> and <code>sysid_angular.csv</code>):</p>
+                <p>After collecting data (saved to SD card as <code>sysid_linear.csv</code> and
+                    <code>sysid_angular.csv</code>):</p>
 
                 <pre><code># Copy files from V5 SD card to util folder, then run:
 python util/sysid_fit.py
@@ -1043,7 +1124,8 @@ EKFConfig ekf_cfg = {
 
                 <div class="info-box warning">
                     <h4>Important</h4>
-                    <p>Linear sysid measures vL and vR together (drives straight). Angular sysid measures them with opposite signs (spins in place). The track width must be accurate for angular parameters!</p>
+                    <p>Linear sysid measures vL and vR together (drives straight). Angular sysid measures them with
+                        opposite signs (spins in place). The track width must be accurate for angular parameters!</p>
                 </div>
             </section>
 
@@ -1081,14 +1163,17 @@ python util/optimize_friction.py --csv friction_tune.csv
 
                 <div class="info-box">
                     <h4>Physical Interpretation</h4>
-                    <p>The kinetic friction parameter represents the maximum lateral acceleration the robot can experience before the wheels break traction. Higher values mean more drift during turns. Typical values: 30-100 depending on wheel type and carpet.</p>
+                    <p>The kinetic friction parameter represents the maximum lateral acceleration the robot can
+                        experience before the wheels break traction. Higher values mean more drift during turns. Typical
+                        values: 30-100 depending on wheel type and carpet.</p>
                 </div>
             </section>
 
             <section id="velocity-controller">
                 <h2>Velocity Controller (STSMC)</h2>
 
-                <p>The Super-Twisting Sliding Mode Controller provides robust velocity tracking with friction feedforward.</p>
+                <p>The Super-Twisting Sliding Mode Controller provides robust velocity tracking with friction
+                    feedforward.</p>
 
                 <h3>STSMC Parameters</h3>
                 <pre><code>struct STSMCParams {
@@ -1101,117 +1186,136 @@ python util/optimize_friction.py --csv friction_tune.csv
 };</code></pre>
 
 
-<h3>Detailed STSMC Parameter Guide</h3>
-<p>Each STSMC parameter controls a specific aspect of the sliding mode controller. Proper tuning ensures fast, accurate velocity tracking without oscillations.</p>
+                <h3>Detailed STSMC Parameter Guide</h3>
+                <p>Each STSMC parameter controls a specific aspect of the sliding mode controller. Proper tuning ensures
+                    fast, accurate velocity tracking without oscillations.</p>
 
-<h4>Sliding Surface Parameters</h4>
-<table>
-<tr>
-    <th>Parameter</th>
-    <th>Description</th>
-    <th>Tuning Guidance</th>
-</tr>
-<tr>
-    <td><code>Lambda[2]</code></td>
-    <td>Sliding surface gain for linear and angular velocity. Controls how aggressively the controller reacts to velocity errors.</td>
-    <td>
-        <strong>Low values (0.5-1.0):</strong> Soft response - may be too slow for fast maneuvers<br>
-        <strong>High values (2.0-5.0):</strong> Aggressive response - fast tracking, may oscillate<br>
-        <strong>Typical value:</strong> 1.2<br>
-        <strong>Tuning:</strong> Increase until you see slight oscillation, then reduce by 20%
-    </td>
-</tr>
-</table>
+                <h4>Sliding Surface Parameters</h4>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Description</th>
+                        <th>Tuning Guidance</th>
+                    </tr>
+                    <tr>
+                        <td><code>Lambda[2]</code></td>
+                        <td>Sliding surface gain for linear and angular velocity. Controls how aggressively the
+                            controller reacts to velocity errors.</td>
+                        <td>
+                            <strong>Low values (0.5-1.0):</strong> Soft response - may be too slow for fast
+                            maneuvers<br>
+                            <strong>High values (2.0-5.0):</strong> Aggressive response - fast tracking, may
+                            oscillate<br>
+                            <strong>Typical value:</strong> 1.2<br>
+                            <strong>Tuning:</strong> Increase until you see slight oscillation, then reduce by 20%
+                        </td>
+                    </tr>
+                </table>
 
-<h4>Controller Gains</h4>
-<table>
-<tr>
-    <th>Parameter</th>
-    <th>Description</th>
-    <th>Tuning Guidance</th>
-</tr>
-<tr>
-    <td><code>K1[2]</code></td>
-    <td>Proportional gain in the super-twisting algorithm. Controls the main control action.</td>
-    <td>
-        <strong>Low values (2.0-4.0):</strong> Gentle control - may not overcome friction<br>
-        <strong>High values (8.0-15.0):</strong> Strong control - fast response, may chatter<br>
-        <strong>Typical value:</strong> 6.5<br>
-        <strong>Tuning:</strong> Increase until step response has minimal overshoot
-    </td>
-</tr>
-<tr>
-    <td><code>K2[2]</code></td>
-    <td>Integral gain in the super-twisting algorithm. Helps reject disturbances and steady-state error.</td>
-    <td>
-        <strong>Low values (5.0-10.0):</strong> Slow integral action - may leave offset<br>
-        <strong>High values (15.0-25.0):</strong> Fast integral action - good disturbance rejection<br>
-        <strong>Typical value:</strong> 12.0<br>
-        <strong>Tuning:</strong> Set 1.5-2.0x higher than K1 for good disturbance rejection
-    </td>
-</tr>
-</table>
+                <h4>Controller Gains</h4>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Description</th>
+                        <th>Tuning Guidance</th>
+                    </tr>
+                    <tr>
+                        <td><code>K1[2]</code></td>
+                        <td>Proportional gain in the super-twisting algorithm. Controls the main control action.</td>
+                        <td>
+                            <strong>Low values (2.0-4.0):</strong> Gentle control - may not overcome friction<br>
+                            <strong>High values (8.0-15.0):</strong> Strong control - fast response, may chatter<br>
+                            <strong>Typical value:</strong> 6.5<br>
+                            <strong>Tuning:</strong> Increase until step response has minimal overshoot
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>K2[2]</code></td>
+                        <td>Integral gain in the super-twisting algorithm. Helps reject disturbances and steady-state
+                            error.</td>
+                        <td>
+                            <strong>Low values (5.0-10.0):</strong> Slow integral action - may leave offset<br>
+                            <strong>High values (15.0-25.0):</strong> Fast integral action - good disturbance
+                            rejection<br>
+                            <strong>Typical value:</strong> 12.0<br>
+                            <strong>Tuning:</strong> Set 1.5-2.0x higher than K1 for good disturbance rejection
+                        </td>
+                    </tr>
+                </table>
 
-<h4>Smoothing and Saturation</h4>
-<table>
-<tr>
-    <th>Parameter</th>
-    <th>Description</th>
-    <th>Tuning Guidance</th>
-</tr>
-<tr>
-    <td><code>s_eps</code></td>
-    <td>Boundary layer thickness for smoothing the sign function. Prevents chattering in the control signal.</td>
-    <td>
-        <strong>Low values (0.001-0.005):</strong> Hard switching - may cause chattering<br>
-        <strong>High values (0.02-0.05):</strong> Soft switching - smoother control<br>
-        <strong>Typical value:</strong> 0.01<br>
-        <strong>Tuning:</strong> Increase if you hear motor buzzing/humming at steady state
-    </td>
-</tr>
-<tr>
-    <td><code>z_max[2]</code></td>
-    <td>Integrator limit in Volts. Prevents integrator windup from large disturbances.</td>
-    <td>
-        <strong>Low values (6.0-8.0):</strong> Conservative - safe but may limit performance<br>
-        <strong>High values (12.0-15.0):</strong> Aggressive - good for large disturbances<br>
-        <strong>Typical value:</strong> 12.0<br>
-        <strong>Setting:</strong> Set to your maximum motor voltage (typically 12V)
-    </td>
-</tr>
-<tr>
-    <td><code>Imax_per_side</code></td>
-    <td>Current limit per motor side in Amperes. Hardware protection.</td>
-    <td>
-        <strong>Typical values:</strong> 2.5A (small robots) to 5.0A (big robots)<br>
-        <strong>Setting:</strong> Set to 20% below your motor's rated current
-    </td>
-</tr>
-</table>
+                <h4>Smoothing and Saturation</h4>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Description</th>
+                        <th>Tuning Guidance</th>
+                    </tr>
+                    <tr>
+                        <td><code>s_eps</code></td>
+                        <td>Boundary layer thickness for smoothing the sign function. Prevents chattering in the control
+                            signal.</td>
+                        <td>
+                            <strong>Low values (0.001-0.005):</strong> Hard switching - may cause chattering<br>
+                            <strong>High values (0.02-0.05):</strong> Soft switching - smoother control<br>
+                            <strong>Typical value:</strong> 0.01<br>
+                            <strong>Tuning:</strong> Increase if you hear motor buzzing/humming at steady state
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>z_max[2]</code></td>
+                        <td>Integrator limit in Volts. Prevents integrator windup from large disturbances.</td>
+                        <td>
+                            <strong>Low values (6.0-8.0):</strong> Conservative - safe but may limit performance<br>
+                            <strong>High values (12.0-15.0):</strong> Aggressive - good for large disturbances<br>
+                            <strong>Typical value:</strong> 12.0<br>
+                            <strong>Setting:</strong> Set to your maximum motor voltage (typically 12V)
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>Imax_per_side</code></td>
+                        <td>Current limit per motor side in Amperes. Hardware protection.</td>
+                        <td>
+                            <strong>Typical values:</strong> 2.5A (small robots) to 5.0A (big robots)<br>
+                            <strong>Setting:</strong> Set to 20% below your motor's rated current
+                        </td>
+                    </tr>
+                </table>
 
-<h3>STSMC Tuning Process</h3>
-<ol>
-    <li><strong>Start with the provided default values</strong> for your robot size. These are generally good starting points.</li>
+                <h3>STSMC Tuning Process</h3>
+                <ol>
+                    <li><strong>Start with the provided default values</strong> for your robot size. These are generally
+                        good starting points.</li>
 
-    <li><strong>Tune Lambda first:</strong> Perform step velocity commands. Increase Lambda until you see slight oscillation, then reduce by 20%. Too low Lambda = sluggish response. Too high Lambda = oscillation.</li>
+                    <li><strong>Tune Lambda first:</strong> Perform step velocity commands. Increase Lambda until you
+                        see slight oscillation, then reduce by 20%. Too low Lambda = sluggish response. Too high Lambda
+                        = oscillation.</li>
 
-    <li><strong>Tune K1 for response speed:</strong> With Lambda fixed, increase K1 until step response has minimal overshoot. Too low K1 = slow response. Too high K1 = overshoot and chatter.</li>
+                    <li><strong>Tune K1 for response speed:</strong> With Lambda fixed, increase K1 until step response
+                        has minimal overshoot. Too low K1 = slow response. Too high K1 = overshoot and chatter.</li>
 
-    <li><strong>Tune K2 for disturbance rejection:</strong> Set K2 = 1.5 × K1 initially. Apply external disturbances (push the robot). Increase K2 if the robot doesn't recover quickly. Too high K2 = oversensitive to noise.</li>
+                    <li><strong>Tune K2 for disturbance rejection:</strong> Set K2 = 1.5 × K1 initially. Apply external
+                        disturbances (push the robot). Increase K2 if the robot doesn't recover quickly. Too high K2 =
+                        oversensitive to noise.</li>
 
-    <li><strong>Adjust s_eps for smoothness:</strong> If motors buzz at steady-state, increase s_eps. If response is too soft, decrease s_eps.</li>
+                    <li><strong>Adjust s_eps for smoothness:</strong> If motors buzz at steady-state, increase s_eps. If
+                        response is too soft, decrease s_eps.</li>
 
-    <li><strong>Set z_max and Imax per side:</strong> Based on your motor limits. These are safety parameters.</li>
-</ol>
+                    <li><strong>Set z_max and Imax per side:</strong> Based on your motor limits. These are safety
+                        parameters.</li>
+                </ol>
 
-<div class="info-box warning">
-<h4>Common Tuning Issues</h4>
-<p><strong>Motors buzz/hum at steady state:</strong> Increase <code>s_eps</code> to smooth the controller</p>
-<p><strong>Slow response to velocity commands:</strong> Increase <code>Lambda</code> and/or <code>K1</code></p>
-<p><strong>Overshoot on velocity steps:</strong> Decrease <code>K1</code> or increase <code>s_eps</code></p>
-<p><strong>Can't hold speed under load:</strong> Increase <code>K2</code> for better disturbance rejection</p>
-<p><strong>Oscillations:</strong> Decrease <code>Lambda</code> or increase <code>s_eps</code></p>
-</div>
+                <div class="info-box warning">
+                    <h4>Common Tuning Issues</h4>
+                    <p><strong>Motors buzz/hum at steady state:</strong> Increase <code>s_eps</code> to smooth the
+                        controller</p>
+                    <p><strong>Slow response to velocity commands:</strong> Increase <code>Lambda</code> and/or
+                        <code>K1</code></p>
+                    <p><strong>Overshoot on velocity steps:</strong> Decrease <code>K1</code> or increase
+                        <code>s_eps</code></p>
+                    <p><strong>Can't hold speed under load:</strong> Increase <code>K2</code> for better disturbance
+                        rejection</p>
+                    <p><strong>Oscillations:</strong> Decrease <code>Lambda</code> or increase <code>s_eps</code></p>
+                </div>
                 <h3>Control Law</h3>
                 <div class="formula">
                     s = Λ·e &nbsp;&nbsp;(sliding surface)
@@ -1268,15 +1372,13 @@ uR = xdot_v / α_v - xdot_w / α_w</code></pre>
 
                 <div class="info-box warning">
                     <h4>Integrator Leakage</h4>
-                    <p>When target velocity is 0, the integrator leaks to decay to 0 in ~0.5 seconds. This prevents "brake creep" where accumulated integral causes slow drift when stopped.</p>
+                    <p>When target velocity is 0, the integrator leaks to decay to 0 in ~0.5 seconds. This prevents
+                        "brake creep" where accumulated integral causes slow drift when stopped.</p>
                 </div>
             </section>
 
             <section id="move-to-point">
                 <h2>Move to Point</h2>
-<div style="text-align: center; margin: 20px 0;">
-  <img src="move_to_point.png" alt="Move To Point Trajectory Diagram" style="max-width: 100%; height: auto; border: 1px solid #d1d9e0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1;">
-</div>
 
 
                 <p>Simple point-to-point navigation using PID control with pure pursuit steering.</p>
@@ -1347,14 +1449,14 @@ motions.waitUntilPose(x, y, theta, pos_margin, theta_margin);
 motions.waitUntilDistance(distance_inches);</code></pre>
             </section>
 
-            <section id="mpcc">
-                <h2>MPCC Path Following</h2>
-<div style="text-align: center; margin: 20px 0;">
-  <img src="mpc_path_following.png" alt="MPC Path Following Controller Diagram" style="max-width: 100%; height: auto; border: 1px solid #d1d9e0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1;">
-</div>
+            <section id="ilqr">
+                <h2>iLQR Path Following</h2>
 
 
-                <p>Model Predictive Contouring Control (MPCC) for smooth path tracking. Uses a simplified formulation with Euclidean position error, cross-track error, and a continuous heading cost that avoids the ±180° wrap discontinuity. The controller includes a friction-based drift model for realistic turning behavior.</p>
+                <p>Iterative Linear Quadratic Regulator (iLQR) for smooth path tracking. This hand-written
+                    implementation uses a 50-step horizon (1 second at 20ms timestep) with Euclidean position error,
+                    cross-track error, and continuous heading cost. The controller includes a friction-based drift model
+                    for realistic turning behavior and wheel speed constraints for differential drive.</p>
 
                 <h3>State and Control</h3>
                 <table>
@@ -1408,8 +1510,8 @@ motions.waitUntilDistance(distance_inches);</code></pre>
                     </tr>
                 </table>
 
-<h3>Weights Configuration</h3>
-<pre><code>struct Weights {
+                <h3>Weights Configuration</h3>
+                <pre><code>struct Weights {
 // Tracking weights
 double q_pos = 10.0;     // Position error (Euclidean distance)
 double q_heading = 5.0;  // Heading error (continuous formula)
@@ -1436,18 +1538,17 @@ double q_vy_N = 8.0;     // Terminal lateral velocity weight
 
 // Trust region & adaptation
 double s_trust = 0.3;    // Half-width (meters)
-double kappa_threshold = 4.0; // Curvature adaptation threshold
+double s_trust_penalty = 100.0; // Trust region violation penalty
 };</code></pre>
 
                 <h3>Control Bounds</h3>
-                <pre><code>struct ControlBounds {
-    double v_min = 0.0;    // m/s
-    double v_max = 1.5;
-    double w_min = -2.5;   // rad/s
-    double w_max = 2.5;
-    double vs_min = 0.0;   // m/s
-    double vs_max = 2.0;
-};</code></pre>
+                <pre><code>struct Bounds {
+      double min_wheel_speed = -2.0; // m/s min individual wheel speed
+      double max_wheel_speed = 2.0;  // m/s max individual wheel speed
+      double track_width = 0.35;     // meters between wheels
+      double vs_min = 0.0;
+      double vs_max = 2.0;
+  };</code></pre>
 
                 <h3>PathTarget Configuration</h3>
                 <pre><code>PathTarget target;
@@ -1462,17 +1563,18 @@ target.waypoints = {
     {21.8, 45.6}     // End
 };
 
-// MPC weights (simplified formulation)
+// iLQR weights
 target.weights.q_pos = 20.0;     // Position error weight
 target.weights.q_heading = 10.0; // Heading error weight
 target.weights.q_cross = 8.0;    // Cross-track error weight
 target.weights.q_progress = 0.5; // Progress reward
 target.weights.v_ref = 1.2;      // Target velocity (m/s)
-target.weights.kappa_threshold = 4.0; // Curvature adaptation
+// curvature adaptation (removed - iLQR uses drift
+model) = 4.0; // Curvature adaptation
 
 // Control bounds
-target.mpc_control_bounds.v_max = 1.0;
-target.mpc_control_bounds.w_max = 10.0;
+target.control_bounds.max_wheel_speed = 1.0;
+target.control_bounds.max_wheel_speed = 10.0;
 
 // Other settings
 target.tolerance = 1.0;           // Exit radius (inches)
@@ -1483,36 +1585,29 @@ target.log_mpc_to_sd = true;      // Enable SD logging
 motions.followPath(target);
 motions.waitUntilPathDone();</code></pre>
 
-<h3>Cost Function</h3>
-<div class="formula">
-J = q<sub>pos</sub>·||p - p<sub>r</sub>|| + ½q<sub>heading</sub>·h(θ, θ<sub>r</sub>) + ½q<sub>cross</sub>·e<sub>c</sub>² + ½q<sub>vy</sub>·v<sub>y</sub>² - q<sub>progress</sub>·v<sub>s</sub>
-</div>
-<p>Where:</p>
-<ul>
-<li><strong>||p - p<sub>r</sub>||</strong> = Euclidean distance to reference position (linear cost for smooth degradation)</li>
-<li><strong>h(θ, θ<sub>r</sub>)</strong> = Continuous heading cost: (cos θ - cos θ<sub>r</sub>)² + (sin θ - sin θ<sub>r</sub>)² (no wrap discontinuity!)</li>
-<li><strong>e<sub>c</sub></strong> = Cross-track error (signed distance perpendicular to path)</li>
-<li><strong>v<sub>y</sub></strong> = Lateral velocity (drift)</li>
-<li><strong>-q<sub>progress</sub>·v<sub>s</sub></strong> = Progress reward (encourages forward motion)</li>
-</ul>
+                <h3>Cost Function</h3>
+                <div class="formula">
+                    J = q<sub>pos</sub>·||p - p<sub>r</sub>|| + ½q<sub>heading</sub>·h(θ, θ<sub>r</sub>) +
+                    ½q<sub>cross</sub>·e<sub>c</sub>² + ½q<sub>vy</sub>·v<sub>y</sub>² -
+                    q<sub>progress</sub>·v<sub>s</sub>
+                </div>
+                <p>Where:</p>
+                <ul>
+                    <li><strong>||p - p<sub>r</sub>||</strong> = Euclidean distance to reference position (linear cost
+                        for smooth degradation)</li>
+                    <li><strong>h(θ, θ<sub>r</sub>)</strong> = Continuous heading cost: (cos θ - cos θ<sub>r</sub>)² +
+                        (sin θ - sin θ<sub>r</sub>)² (no wrap discontinuity!)</li>
+                    <li><strong>e<sub>c</sub></strong> = Cross-track error (signed distance perpendicular to path)</li>
+                    <li><strong>v<sub>y</sub></strong> = Lateral velocity (drift)</li>
+                    <li><strong>-q<sub>progress</sub>·v<sub>s</sub></strong> = Progress reward (encourages forward
+                        motion)</li>
+                </ul>
 
-<h3>Continuous Heading Cost</h3>
-<p>The heading error uses a wrap-safe formulation:</p>
-<pre><code>// Instead of (theta - theta_ref)² which has discontinuity at ±180°
+                <h3>Continuous Heading Cost</h3>
+                <p>The heading error uses a wrap-safe formulation:</p>
+                <pre><code>// Instead of (theta - theta_ref)² which has discontinuity at ±180°
 // We use: (cos(th) - cos(ref))² + (sin(th) - sin(ref))²
 // This equals 2(1 - cos(error)) which is smooth everywhere!</code></pre>
-
-<h3>Curvature-Based Adaptation</h3>
-<p>The MPC automatically adapts behavior based on path curvature (κ):</p>
-<pre><code>// Adaptive target velocity (slower in curves)
-v_safe = v_ref / (1 + 0.5 * kappa / kappa_threshold)
-
-// Adaptive cross-track weight (tighter following in curves)
-q_cross_adaptive = q_cross * (1 + kappa / kappa_threshold)</code></pre>
-<ul>
-<li><strong>High curvature:</strong> Reduced target speed, increased cross-track weight for tighter path following</li>
-<li><strong>Low curvature:</strong> Full speed, normal cross-track weight for efficiency</li>
-</ul>
 
                 <h3>Progress Tracking</h3>
                 <p>The controller fuses prediction with projection:</p>
@@ -1526,56 +1621,83 @@ s_projected = projectSFromPosition(xi, yi, s_hint);
 s_fused = s_predicted + clamp(s_proj - s_pred, -0.15, +0.15);</code></pre>
 
 
-<h3>MPCC Weight Tuning Guide</h3>
-<div class="info-box">
-<h4>Quick Start</h4>
-<table>
-<tr><th>Parameter</th><th>Effect</th><th>Typical Range</th></tr>
-<tr><td><code>q_pos</code></td><td>Overall position tracking</td><td>10-50</td></tr>
-<tr><td><code>q_heading</code></td><td>Heading alignment</td><td>5-20</td></tr>
-<tr><td><code>q_cross</code></td><td>Path accuracy (vs speed)</td><td>8-30</td></tr>
-<tr><td><code>q_progress</code></td><td>Forward motion incentive</td><td>0.5-5</td></tr>
-<tr><td><code>v_ref</code></td><td>Target speed (m/s)</td><td>0.5-1.5</td></tr>
-</table>
-</div>
+                <h3>iLQR Weight Tuning Guide</h3>
+                <div class="info-box">
+                    <h4>Quick Start</h4>
+                    <table>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Effect</th>
+                            <th>Typical Range</th>
+                        </tr>
+                        <tr>
+                            <td><code>q_pos</code></td>
+                            <td>Overall position tracking</td>
+                            <td>10-50</td>
+                        </tr>
+                        <tr>
+                            <td><code>q_heading</code></td>
+                            <td>Heading alignment</td>
+                            <td>5-20</td>
+                        </tr>
+                        <tr>
+                            <td><code>q_cross</code></td>
+                            <td>Path accuracy (vs speed)</td>
+                            <td>8-30</td>
+                        </tr>
+                        <tr>
+                            <td><code>q_progress</code></td>
+                            <td>Forward motion incentive</td>
+                            <td>0.5-5</td>
+                        </tr>
+                        <tr>
+                            <td><code>v_ref</code></td>
+                            <td>Target speed (m/s)</td>
+                            <td>0.5-1.5</td>
+                        </tr>
+                    </table>
+                </div>
 
-<h4>Position vs Cross-Track</h4>
-<ul>
-<li><strong>High q_pos, Low q_cross:</strong> Robot prioritizes reaching the point, may cut corners</li>
-<li><strong>Low q_pos, High q_cross:</strong> Robot stays on path but may slow down</li>
-<li><strong>Balanced:</strong> q_cross ≈ q_pos for smooth, accurate following</li>
-</ul>
+                <h4>Position vs Cross-Track</h4>
+                <ul>
+                    <li><strong>High q_pos, Low q_cross:</strong> Robot prioritizes reaching the point, may cut corners
+                    </li>
+                    <li><strong>Low q_pos, High q_cross:</strong> Robot stays on path but may slow down</li>
+                    <li><strong>Balanced:</strong> q_cross ≈ q_pos for smooth, accurate following</li>
+                </ul>
 
-<h4>Heading Weight</h4>
-<ul>
-<li><strong>High q_heading:</strong> Robot turns aggressively to match path heading (good for precise maneuvers)</li>
-<li><strong>Low q_heading:</strong> More gradual turns, smoother motion</li>
-</ul>
+                <h4>Heading Weight</h4>
+                <ul>
+                    <li><strong>High q_heading:</strong> Robot turns aggressively to match path heading (good for
+                        precise maneuvers)</li>
+                    <li><strong>Low q_heading:</strong> More gradual turns, smoother motion</li>
+                </ul>
 
-<h4>Progress Reward</h4>
-<ul>
-<li><strong>Too high:</strong> Robot rushes forward, may overshoot corners</li>
-<li><strong>Too low:</strong> Robot may stop or move too slowly</li>
-</ul>
+                <h4>Progress Reward</h4>
+                <ul>
+                    <li><strong>Too high:</strong> Robot rushes forward, may overshoot corners</li>
+                    <li><strong>Too low:</strong> Robot may stop or move too slowly</li>
+                </ul>
 
-<h4>Control Rate Penalties</h4>
-<ul>
-<li><strong>High w_dv, w_dw:</strong> Smoother control transitions, less aggressive acceleration</li>
-<li><strong>Low values:</strong> Snappier response, but may cause wheel slip or jerk</li>
-</ul>
+                <h4>Control Rate Penalties</h4>
+                <ul>
+                    <li><strong>High w_dv, w_dw:</strong> Smoother control transitions, less aggressive acceleration
+                    </li>
+                    <li><strong>Low values:</strong> Snappier response, but may cause wheel slip or jerk</li>
+                </ul>
 
-<h4>Trust Region (s_trust)</h4>
-<p>Soft constraint preventing the solver from "cheating" progress:</p>
-<ul>
-<li><strong>Too narrow:</strong> Robot struggles to recover from disturbances</li>
-<li><strong>Too wide:</strong> May allow large position tracking errors</li>
-<li><strong>Typical:</strong> 0.2-0.5 meters</li>
-</ul>
-                <h3>Acados Solver</h3>
+                <h4>Trust Region (s_trust)</h4>
+                <p>Soft constraint preventing the solver from "cheating" progress:</p>
+                <ul>
+                    <li><strong>Too narrow:</strong> Robot struggles to recover from disturbances</li>
+                    <li><strong>Too wide:</strong> May allow large position tracking errors</li>
+                    <li><strong>Typical:</strong> 0.2-0.5 meters</li>
+                </ul>
+                <h3>iLQR Solver</h3>
 
-<h3>Drift Model (Lateral Velocity)</h3>
-<p>The MPC includes a friction-based lateral velocity model:</p>
-<pre><code>// Drift dynamics: vy decays with friction, increases during turns
+                <h3>Drift Model (Lateral Velocity)</h3>
+                <p>The iLQR includes a friction-based lateral velocity model:</p>
+                <pre><code>// Drift dynamics: vy decays with friction, increases during turns
 vy_next = vy - centripetal_contribution - friction_decay
 
 // Centripetal force creates drift during turns
@@ -1584,15 +1706,16 @@ centripetal = v * w * dt  // from centripetal acceleration
 // Friction coefficient (fk) determines drift magnitude
 // Higher fk = more drift in turns (slippery surface)
 // Lower fk = less drift (high traction)</code></pre>
-<div class="info-box">
-<h4>Tuning fk (Friction)</h4>
-<ul>
-<li><strong>fk = 0.3:</strong> Typical carpet/foam tile (default)</li>
-<li><strong>fk = 0.5+:</strong> Slippery surface, more drift</li>
-<li><strong>fk = 0.1:</strong> High traction, minimal drift</li>
-</ul>
-<p>Calibrate by observing robot behavior during turns - if the robot drifts more than predicted, increase fk.</p>
-</div>
+                <div class="info-box">
+                    <h4>Tuning fk (Friction)</h4>
+                    <ul>
+                        <li><strong>fk = 0.3:</strong> Typical carpet/foam tile (default)</li>
+                        <li><strong>fk = 0.5+:</strong> Slippery surface, more drift</li>
+                        <li><strong>fk = 0.1:</strong> High traction, minimal drift</li>
+                    </ul>
+                    <p>Calibrate by observing robot behavior during turns - if the robot drifts more than predicted,
+                        increase fk.</p>
+                </div>
                 <div class="info-box">
                     <h4>Solver Configuration</h4>
                     <ul>
@@ -1609,14 +1732,14 @@ centripetal = v * w * dt  // from centripetal acceleration
 python util/generate_ocp.py
 
 # This generates:
-# - include/mpcc/acados_solver_mpcc.h
-# - mpcc model/cost functions</code></pre>
+
+</code></pre>
             </section>
 
             <section id="path-planner">
                 <h2>Path Planner</h2>
 
-                <p>Converts discrete waypoints into smooth cubic Bezier curves for the MPC to follow.</p>
+                <p>Converts discrete waypoints into smooth cubic Bezier curves for the iLQR to follow.</p>
 
                 <h3>Bezier Segment Structure</h3>
                 <pre><code>struct BezierSegment {
@@ -1638,23 +1761,54 @@ planner.setWaypoints(wps);
 double total_length = planner.getTotalLength();  // meters
 Pose pose = planner.getPose(s);  // Get pose at progress s</code></pre>
 
+                <h3>PathWaypoint with Heading Flip</h3>
+                <p>For reverse motion (approaching or exiting waypoints backwards), use the <code>flip_heading</code>
+                    flag:</p>
+                <pre><code>struct PathWaypoint {
+    double x;          // Position X (inches)
+    double y;          // Position Y (inches)
+    bool flip_heading; // If true, tangent direction is reversed 180&deg;
+};
+
+// Example: Approach final point in reverse
+std::vector&lt;PathWaypoint&gt; wps = {
+    {-44.9, 13.9, false}, // Start - normal
+    {-22.2, 22.2, false}, // Intermediate - normal
+    {-3.8, 46.5, true}    // End - flip heading (robot approaches backwards)
+};</code></pre>
+
+                <div class="info-box">
+                    <h4>When to Use flip_heading</h4>
+                    <ul>
+                        <li><strong>Reverse approach:</strong> Set <code>flip_heading = true</code> on the final
+                            waypoint to make the robot approach backwards</li>
+                        <li><strong>Intake alignment:</strong> Useful when the intake is on the back of the robot</li>
+                        <li><strong>Precise positioning:</strong> Back into scoring positions for better control</li>
+                    </ul>
+                    <p>When enabled, the path tangent at that waypoint is rotated 180&deg;, so the robot faces the
+                        opposite direction while following the path.</p>
+                </div>
+
                 <h3>Pose Structure</h3>
                 <pre><code>struct Pose {
-    double x;      // Position X (meters)
-    double y;      // Position Y (meters)
-    double theta;  // Heading (radians, compass)
+    double x;          // Position X (meters)
+    double y;          // Position Y (meters)
+    double theta;      // Heading (radians, compass)
+    bool flip_heading;  // flip heading at this point
 };</code></pre>
 
                 <h3>Algorithm Details</h3>
                 <ul>
                     <li><strong>2 waypoints:</strong> Single segment with 1/3 and 2/3 control points</li>
-                    <li><strong>&gt;2 waypoints:</strong> Thomas algorithm for C<sup>1</sup> continuity (smooth tangent)</li>
+                    <li><strong>&gt;2 waypoints:</strong> Thomas algorithm for C<sup>1</sup> continuity (smooth tangent)
+                    </li>
                     <li><strong>Arc length:</strong> 5-point Gauss quadrature integration</li>
                     <li><strong>Pose lookup:</strong> O(1) after segment search</li>
                 </ul>
 
                 <h3>C<sup>1</sup> Continuity</h3>
-                <p>The planner solves a tridiagonal system to ensure the tangent vector is continuous at waypoint boundaries:</p>
+                <p>The planner solves a tridiagonal system to ensure the tangent vector is continuous at waypoint
+                    boundaries:</p>
                 <div class="formula">
                     B'(t<sub>i</sub><sup>+</sup>) = B'(t<sub>i+1</sub><sup>-</sup>)
                 </div>
@@ -1770,7 +1924,7 @@ Pose pose = planner.getPose(s);  // Get pose at progress s</code></pre>
                     </tr>
                     <tr>
                         <td><code>followPath(PathTarget)</code></td>
-                        <td>Start MPC path</td>
+                        <td>Start iLQR path</td>
                         <td>void</td>
                     </tr>
                     <tr>
@@ -1790,7 +1944,7 @@ Pose pose = planner.getPose(s);  // Get pose at progress s</code></pre>
                     </tr>
                     <tr>
                         <td><code>waitUntilPathDone()</code></td>
-                        <td>Wait for MPC</td>
+                        <td>Wait for iLQR</td>
                         <td>void</td>
                     </tr>
                     <tr>
@@ -1800,7 +1954,7 @@ Pose pose = planner.getPose(s);  // Get pose at progress s</code></pre>
                     </tr>
                 </table>
 
-                <h3>MPCC_Controller</h3>
+                <h3>ILQR_Controller</h3>
                 <table>
                     <tr>
                         <th>Method</th>
@@ -1818,13 +1972,13 @@ Pose pose = planner.getPose(s);  // Get pose at progress s</code></pre>
                         <td>void</td>
                     </tr>
                     <tr>
-                        <td><code>setControlBounds(ControlBounds)</code></td>
-                        <td>Set u limits</td>
+                        <td><code>setBounds(Bounds)</code></td>
+                        <td>Set bounds</td>
                         <td>void</td>
                     </tr>
                     <tr>
                         <td><code>runStep(state, prev_u)</code></td>
-                        <td>Solve one MPC step</td>
+                        <td>Solve one iLQR step</td>
                         <td>Control</td>
                     </tr>
                     <tr>
@@ -1882,7 +2036,7 @@ Pose pose = planner.getPose(s);  // Get pose at progress s</code></pre>
                     <li>If oscillating: increase s_eps</li>
                 </ul>
 
-                <h3>5. MPC Tuning</h3>
+                <h3>5. iLQR Tuning</h3>
                 <ul>
                     <li>Start with provided weights</li>
                     <li>If cutting corners: increase q_cross</li>
@@ -1930,7 +2084,7 @@ Pose pose = planner.getPose(s);  // Get pose at progress s</code></pre>
                     <li>Ensure PF is initialized correctly</li>
                 </ul>
 
-                <h3>MPC Not Following Path</h3>
+                <h3>iLQR Not Following Path</h3>
                 <ul>
                     <li>Check <code>intake_offset</code> is correct</li>
                     <li>Verify waypoints are in correct coordinate system</li>
@@ -1950,7 +2104,7 @@ Pose pose = planner.getPose(s);  // Get pose at progress s</code></pre>
                 <ul>
                     <li>Run <code>make clean</code> then <code>make quick</code></li>
                     <li>Check third-party includes are installed</li>
-                    <li>Verify acados is built for ARM Cortex-A9</li>
+                    <li>Verify iLQR converges (check iterations_used_)</li>
                     <li>Check PROS kernel version</li>
                 </ul>
 
@@ -1968,7 +2122,7 @@ Pose pose = planner.getPose(s);  // Get pose at progress s</code></pre>
                     </tr>
                     <tr>
                         <td>Solver status != 0</td>
-                        <td>MPC infeasible</td>
+                        <td>iLQR infeasible</td>
                         <td>Relax bounds or check initial state</td>
                     </tr>
                     <tr>
@@ -1979,9 +2133,10 @@ Pose pose = planner.getPose(s);  // Get pose at progress s</code></pre>
                 </table>
             </section>
 
-            <footer style="margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border-color); color: var(--text-secondary); font-size: 0.85rem;">
+            <footer
+                style="margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border-color); color: var(--text-secondary); font-size: 0.85rem;">
                 <p>VEX V5 Motion Control System Documentation</p>
-                <p>Built with PROS 4.0 | acados | blasfeo | hpipm</p>
+                <p>Built with PROS 4.0 | iLQR | blasfeo</p>
             </footer>
         </main>
     </div>
@@ -1989,7 +2144,7 @@ Pose pose = planner.getPose(s);  // Get pose at progress s</code></pre>
     <script>
         // Smooth scrolling for navigation
         document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', function(e) {
+            link.addEventListener('click', function (e) {
                 e.preventDefault();
                 const target = document.querySelector(this.getAttribute('href'));
                 if (target) {
@@ -2023,4 +2178,5 @@ Pose pose = planner.getPose(s);  // Get pose at progress s</code></pre>
         });
     </script>
 </body>
+
 </html>

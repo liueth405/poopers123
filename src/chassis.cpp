@@ -259,10 +259,14 @@ void Chassis::update() {
   // EKF Covariance Prediction
   double a00 = 1.0 - g_.lambda_v * dt;
   double a11 = 1.0 - g_.lambda_w * dt;
-  P_cov[0] = a00 * a00 * P_cov[0] + ekf_config_.Q_v * dt;
+
+  double Q_v_disc = ekf_config_.Q_v * dt / (1.0 + g_.lambda_v * dt);
+  double Q_w_disc = ekf_config_.Q_w * dt / (1.0 + g_.lambda_w * dt);
+
+  P_cov[0] = a00 * a00 * P_cov[0] + Q_v_disc;
   P_cov[1] = a00 * a11 * P_cov[1];
   P_cov[2] = a00 * a11 * P_cov[2];
-  P_cov[3] = a11 * a11 * P_cov[3] + ekf_config_.Q_w * dt;
+  P_cov[3] = a11 * a11 * P_cov[3] + Q_w_disc;
 
   // EKF Measurement Updates (REMOVED MAHALANOBIS REJECTION)
   // Since we already clamped the encoders to physical reality, we ALWAYS
@@ -274,29 +278,43 @@ void Chassis::update() {
     double S = h0 * h0 * P_cov[0] + h0 * h1 * P_cov[1] + h1 * h0 * P_cov[2] +
                h1 * h1 * P_cov[3] + R;
 
+    // Adaptive: inflate R instead of hard rejecting
+    double mahal_sq = (y * y) / S;
+    double R_effective = R;
+    if (mahal_sq > ekf_config_.slip_tolerance) {
+      R_effective = R * (mahal_sq / ekf_config_.slip_tolerance);
+      S = h0 * h0 * P_cov[0] + h0 * h1 * P_cov[1] + h1 * h0 * P_cov[2] +
+          h1 * h1 * P_cov[3] + R_effective;
+    }
+
     double K0 = (P_cov[0] * h0 + P_cov[1] * h1) / S;
     double K1 = (P_cov[2] * h0 + P_cov[3] * h1) / S;
 
     v_pred += K0 * y;
     w_pred += K1 * y;
 
-    double t00 = 1.0 - K0 * h0, t01 = -K0 * h1;
-    double t10 = -K1 * h0, t11 = 1.0 - K1 * h1;
+    // Joseph form for covariance update
+    double IKH_00 = 1.0 - K0 * h0, IKH_01 = -K0 * h1;
+    double IKH_10 = -K1 * h0, IKH_11 = 1.0 - K1 * h1;
 
-    double p0_new = t00 * P_cov[0] + t01 * P_cov[1];
-    double p1_new = t10 * P_cov[0] + t11 * P_cov[1];
-    double p2_new = t00 * P_cov[2] + t01 * P_cov[3];
-    double p3_new = t10 * P_cov[2] + t11 * P_cov[3];
+    double t00 = IKH_00 * P_cov[0] + IKH_01 * P_cov[2];
+    double t01 = IKH_00 * P_cov[1] + IKH_01 * P_cov[3];
+    double t10 = IKH_10 * P_cov[0] + IKH_11 * P_cov[2];
+    double t11 = IKH_10 * P_cov[1] + IKH_11 * P_cov[3];
 
-    P_cov[0] = p0_new;
-    P_cov[1] = p1_new;
-    P_cov[2] = p2_new;
-    P_cov[3] = p3_new;
+    P_cov[0] = t00 * IKH_00 + t01 * IKH_10 + K0 * K0 * R_effective;
+    P_cov[1] = t00 * IKH_01 + t01 * IKH_11 + K0 * K1 * R_effective;
+    P_cov[2] = t10 * IKH_00 + t11 * IKH_10 + K1 * K0 * R_effective;
+    P_cov[3] = t10 * IKH_01 + t11 * IKH_11 + K1 * K1 * R_effective;
   };
 
   // Process measurements sequentially
-  apply_update(w_imu, 0.0, 1.0, ekf_config_.R_w_imu);
-  apply_update(w_enc, 0.0, 1.0, ekf_config_.R_w_enc);
+  double w_fused = (w_imu / ekf_config_.R_w_imu + w_enc / ekf_config_.R_w_enc) /
+                   (1.0 / ekf_config_.R_w_imu + 1.0 / ekf_config_.R_w_enc);
+  double R_w_fused =
+      1.0 / (1.0 / ekf_config_.R_w_imu + 1.0 / ekf_config_.R_w_enc);
+
+  apply_update(w_fused, 0.0, 1.0, R_w_fused);
   apply_update(v_enc, 1.0, 0.0, ekf_config_.R_v_enc);
 
   // Write updated states back to blasfeo vector sx

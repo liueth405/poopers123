@@ -5,11 +5,12 @@
 #include <cstdio>
 #include <random>
 
-SystemIdentification::SystemIdentification(Chassis &chassis) 
-  : chassis_(chassis), fp(nullptr), _currentTime(0.0) {}
+SystemIdentification::SystemIdentification(Chassis &chassis)
+    : chassis_(chassis), fp(nullptr), _currentTime(0.0) {}
 
 void SystemIdentification::runSession(bool isAngular, const char *filename) {
-  if (!beginLog(filename)) return;
+  if (!beginLog(filename))
+    return;
 
   double uL_scale = 12.0;
   double uR_scale = isAngular ? -12.0 : 12.0;
@@ -69,19 +70,21 @@ bool SystemIdentification::beginLog(const char *filename) {
 }
 
 void SystemIdentification::endLog() {
-  if (fp) fclose(fp);
+  if (fp)
+    fclose(fp);
   fp = nullptr;
   chassis_.tank(0, 0);
 }
 
 void SystemIdentification::logRow(const RawRow &row, const char *tag) {
-  if (!fp) return;
-  fprintf(fp, "%.4f,%.2f,%.2f,%.2f,%.2f,%.3f,%.3f,%.3f,%s\n",
-          row.t, row.uL, row.uR, row.u_act_l, row.u_act_r, 
-          row.vL, row.vR, row.heading, tag);
+  if (!fp)
+    return;
+  fprintf(fp, "%.4f,%.2f,%.2f,%.2f,%.2f,%.3f,%.3f,%.3f,%s\n", row.t, row.uL,
+          row.uR, row.u_act_l, row.u_act_r, row.vL, row.vR, row.heading, tag);
 }
 
-SystemIdentification::RawRow SystemIdentification::sampleRow(double t, double uL, double uR) {
+SystemIdentification::RawRow
+SystemIdentification::sampleRow(double t, double uL, double uR) {
   RawRow row;
   row.t = t;
   row.uL = uL;
@@ -92,11 +95,17 @@ SystemIdentification::RawRow SystemIdentification::sampleRow(double t, double uL
   int cl = 0, cr = 0;
   for (auto &m : chassis_.left_motors) {
     double v = m->get_voltage();
-    if (v != PROS_ERR_F) { uL_sum += v; cl++; }
+    if (v != PROS_ERR_F) {
+      uL_sum += v;
+      cl++;
+    }
   }
   for (auto &m : chassis_.right_motors) {
     double v = m->get_voltage();
-    if (v != PROS_ERR_F) { uR_sum += v; cr++; }
+    if (v != PROS_ERR_F) {
+      uR_sum += v;
+      cr++;
+    }
   }
   row.u_act_l = (cl > 0 ? (uL_sum / cl) / 1000.0 : 0.0);
   row.u_act_r = (cr > 0 ? (uR_sum / cr) / 1000.0 : 0.0);
@@ -107,7 +116,8 @@ SystemIdentification::RawRow SystemIdentification::sampleRow(double t, double uL
   return row;
 }
 
-void SystemIdentification::runMultiStep(double maxUL, double maxUR, double stepSize, int numSteps) {
+void SystemIdentification::runMultiStep(double maxUL, double maxUR,
+                                        double stepSize, int numSteps) {
   for (int step = 0; step < numSteps; ++step) {
     double uL = (step + 1) * stepSize * maxUL;
     double uR = (step + 1) * stepSize * maxUR;
@@ -118,8 +128,13 @@ void SystemIdentification::runMultiStep(double maxUL, double maxUR, double stepS
       _currentTime += DT;
       pros::delay((int)(DT * 1000));
     }
-    // Stop and reposition
     chassis_.tank(0, 0);
+    for (int i = 0; i < (int)(0.5 / DT); ++i) {
+      auto row = sampleRow(_currentTime, 0, 0);
+      logRow(row, "coastdown");
+      _currentTime += DT;
+      pros::delay((int)(DT * 1000));
+    }
     for (int i = 0; i < 5; ++i) {
       auto row = sampleRow(_currentTime, 0, 0);
       logRow(row, "stop");
@@ -130,19 +145,32 @@ void SystemIdentification::runMultiStep(double maxUL, double maxUR, double stepS
   }
 }
 
-void SystemIdentification::runPRBS(double maxUL, double maxUR, double holdTime, double duration) {
+void SystemIdentification::runPRBS(double maxUL, double maxUR, double holdTime,
+                                   double duration) {
   double uL = 0, uR = 0;
   uint32_t lastSwitchTime = 0;
   int mode = 0;
-  
+
   for (int i = 0; i < (int)(duration / DT); ++i) {
     if (pros::millis() - lastSwitchTime > holdTime * 1000) {
       // Cycle through modes to ensure zero-mean movement (stay in place)
       switch (mode % 4) {
-        case 0: uL =  maxUL; uR =  maxUR; break; // Forward
-        case 1: uL = -maxUL; uR = -maxUR; break; // Backward
-        case 2: uL =  maxUL; uR = -maxUR; break; // Turn Right
-        case 3: uL = -maxUL; uR =  maxUR; break; // Turn Left
+      case 0:
+        uL = maxUL;
+        uR = maxUR;
+        break; // Forward
+      case 1:
+        uL = -maxUL;
+        uR = -maxUR;
+        break; // Backward
+      case 2:
+        uL = maxUL;
+        uR = -maxUR;
+        break; // Turn Right
+      case 3:
+        uL = -maxUL;
+        uR = maxUR;
+        break; // Turn Left
       }
       mode++;
       lastSwitchTime = pros::millis();
@@ -156,7 +184,8 @@ void SystemIdentification::runPRBS(double maxUL, double maxUR, double holdTime, 
   chassis_.tank(0, 0);
 }
 
-void SystemIdentification::runChirp(double maxUL, double maxUR, double minFreq, double maxFreq, double duration) {
+void SystemIdentification::runChirp(double maxUL, double maxUR, double minFreq,
+                                    double maxFreq, double duration) {
   for (int i = 0; i < (int)(duration / DT); ++i) {
     double local_t = i * DT;
     double freq = minFreq + (maxFreq - minFreq) * (local_t / duration);

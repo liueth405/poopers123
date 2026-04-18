@@ -288,11 +288,11 @@ void MotionManager::loop() {
     } else if (state == MotionState::FOLLOWING_PATH) {
       double path_length_m = ilqr_controller.getPathLength();
       auto last_wp_inches = current_path.waypoints.back();
-  // Use intake point position for termination check
-  double offset_in = current_path.intake_offset;
-  double cur_th_rad_check = est.theta_deg * DEG_TO_RAD;
-  double intake_x = est.x + offset_in * std::sin(cur_th_rad_check);
-  double intake_y = est.y + offset_in * std::cos(cur_th_rad_check);
+      // Use intake point position for termination check
+      double offset_in = current_path.intake_offset;
+      double cur_th_rad_check = est.theta_deg * DEG_TO_RAD;
+      double intake_x = est.x + offset_in * std::sin(cur_th_rad_check);
+      double intake_y = est.y + offset_in * std::cos(cur_th_rad_check);
       double real_dx = last_wp_inches.x - intake_x;
       double real_dy = last_wp_inches.y - intake_y;
       double tolerance_m = current_path.tolerance * 0.0254; // inches to meters
@@ -338,36 +338,26 @@ void MotionManager::loop() {
         mpc_state.vy = est.lateral * 0.0254;
         mpc_state.s = current_ilqr_s;
 
-        double s_predicted = current_ilqr_s + prev_ilqr_u.vs * dt_mpc;
-        s_predicted =
-            std::clamp(s_predicted, 0.0, ilqr_controller.getPathLength());
+        // Project intake position onto path to get progress
         double offset_m = current_path.intake_offset * 0.0254;
         double xi = mpc_state.x + offset_m * std::sin(mpc_state.theta);
         double yi = mpc_state.y + offset_m * std::cos(mpc_state.theta);
-        double s_proj_raw =
+        double s_proj =
             ilqr_controller.projectSFromPosition(xi, yi, current_ilqr_s);
-        double s_proj = std::max(current_ilqr_s, s_proj_raw);
 
-        double dist_to_path_end = path_length_m - current_ilqr_s;
-        double progress_alpha = (dist_to_path_end < current_path.alpha_threshold) ? current_path.progress_alpha_near : current_path.progress_alpha_far;
-        double s_fused =
-            progress_alpha * s_proj + (1.0 - progress_alpha) * s_predicted;
+        // Apply safety limits: never go backwards, don't pull too far ahead
+        s_proj = std::max(current_ilqr_s, s_proj); // Monotonic progress
+        s_proj = std::min(s_proj, current_ilqr_s + current_path.max_lead);
 
-        double max_lead = current_path.max_lead;
-        s_fused = std::min(s_predicted, s_proj + max_lead);
-        // Near end of path: use actual projection, not predicted
-        if (dist_to_path_end < current_path.near_end_dist) {
-          s_fused = s_proj;
-        }
-
-        current_ilqr_s = std::max(current_ilqr_s, s_fused);
+        current_ilqr_s = s_proj;
         mpc_state.s = current_ilqr_s;
 
         ILQR_Controller::Bounds bounds = current_path.control_bounds;
-  bounds.track_width = chassis.get_track_width_m();
-  ilqr_controller.setBounds(bounds);
+        bounds.track_width = chassis.get_track_width_m();
+        ilqr_controller.setBounds(bounds);
 
-        if (dist_to_path_end < tolerance_m) { // (~1.5 inches)
+        double dist_to_path_end = path_length_m - current_ilqr_s;
+        if (dist_to_path_end < tolerance_m) {
           mpc_sd_log_.end();
           state = MotionState::IDLE;
           chassis.tank(0, 0);

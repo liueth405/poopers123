@@ -20,7 +20,7 @@ pros::v5::MotorGears MOTOR_CARTRIDGE = pros::v5::MotorGears::green;
 
 // --- Global Objects ---
 Chassis chassis(LEFT_MOTOR_PORTS, RIGHT_MOTOR_PORTS, IMU_PORTS,
-                DISTANCE_SENSOR_PORTS, GEAR_RATIO, 4, 11.5, MOTOR_CARTRIDGE,
+                DISTANCE_SENSOR_PORTS, GEAR_RATIO, 4, 11.15, MOTOR_CARTRIDGE,
                 EKFConfig{
                     .Q_v = 0.070366,
                     .Q_w = 0.153613,
@@ -242,12 +242,12 @@ void autonomous() {
 
   target1.v_target_end = 0;
 
-  target1.max_dw_per_tick = 0.245; 
+  target1.max_dw_per_tick = 0.10; 
   target1.max_dv_per_tick = 0.075; 
   target1.weights.q_pos = 15.0;   
-  target1.weights.q_heading = 3; 
-  target1.weights.q_cross = 4.0; 
-  target1.weights.q_progress = 5.0; 
+  target1.weights.q_heading = 1.5; 
+  target1.weights.q_cross = 18.0; 
+  target1.weights.q_progress = 10.0; 
   target1.weights.q_vy = 2.0; 
 
   target1.weights.w_dv = 100.0;  
@@ -259,14 +259,13 @@ void autonomous() {
   target1.weights.w_w = 2.5;
 
   target1.weights.q_pos_N = 100.0;     
-  target1.weights.q_heading_N = 150.0; 
-  target1.weights.q_cross_N = 80.0;    
+  target1.weights.q_heading_N = 80.0; 
+  target1.weights.q_cross_N = 120.0;    
   target1.weights.q_vy_N = 40.0;       
 
   target1.weights.s_trust = 0.15; 
   target1.weights.s_trust_penalty = 25;  
   target1.intake_offset = 4.5;
-  target1.tolerance = 1.0;
   
 
   target1.control_bounds.vs_max = 1.2;
@@ -274,7 +273,7 @@ void autonomous() {
   target1.control_bounds.min_wheel_speed = -1.3;
 
   target1.tolerance = 2.5;
-  target1.heading_tolerance = 4;
+  target1.heading_tolerance = 8;
 
   target1.log_mpc_to_sd = true;
 

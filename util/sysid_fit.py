@@ -12,6 +12,7 @@ import pandas as pd
 from scipy.optimize import least_squares, minimize
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
+from sklearn.model_selection import KFold
 
 INCHES_TO_M = 0.0254
 
@@ -52,6 +53,29 @@ def simulate_ekf_likelihood(t, u, v_meas, K, tau, kS, log_Q, log_R):
 
     return nll
 
+
+def estimate_measurement_noise(fit_res):
+    """Estimate per-sample measurement noise using first-difference of residuals.
+
+    First-differencing kills low-frequency model error (correlated, from
+    unmodeled dynamics like scrub friction) and retains only high-frequency
+    white measurement noise: var(Δres) ≈ 2 * σ²_noise.
+    This is a standard Allan variance technique.
+    """
+    if not fit_res:
+        return None
+
+    diff_vars = []
+    for t, u, v_meas in zip(fit_res['t_segs'], fit_res['u_segs'], fit_res['v_segs']):
+        v_sim = model_rk4(t, u, fit_res['K'], fit_res['tau'], fit_res['kS'],
+                          v0=v_meas[0])
+        seg_res = v_sim - v_meas
+        if len(seg_res) > 3:
+            diff_vars.append(float(np.var(np.diff(seg_res))))
+
+    if diff_vars:
+        return float(np.median(diff_vars)) / 2.0  # var(Δ) = 2σ² → σ² = var(Δ)/2
+    return None
 
 # ─── Model simulation ────────────────────────────────────────────────────────
 
@@ -269,6 +293,7 @@ def fit_axis(csv_path: str, v_col: str, label: str, is_angular: bool = False):
     # We now feed all unmodified active data segments into the optimizer 
     df_fit = pd.concat([
         df[df['tag'] == 'multistep'],
+        df[df['tag'] == 'coastdown'],
         df[df['tag'] == 'prbs'],
         df[df['tag'] == 'chirp'],
         df[df['tag'] == 'step'],
@@ -279,6 +304,32 @@ def fit_axis(csv_path: str, v_col: str, label: str, is_angular: bool = False):
     print(f"  Segments for LM: {len(t_segs)}")
     if len(t_segs) < 1:
         return None
+
+    if len(t_segs) >= 2:
+        kf = KFold(n_splits=min(5, len(t_segs)), shuffle=True, random_state=42)
+        r2_scores_cv = []
+        for train_idx, test_idx in kf.split(t_segs):
+            t_train = [t_segs[i] for i in train_idx]
+            u_train = [u_segs[i] for i in train_idx]
+            v_train = [v_segs[i] for i in train_idx]
+            try:
+                cv_res = least_squares(
+                    residuals,
+                    x0=[K0, tau0, kS0],
+                    bounds=([0.01, 0.05, 0.0], [0.35, 2.0, 3.5]),
+                    args=(t_train, u_train, v_train, K0, tau0, kS0),
+                    method='trf', ftol=1e-6, xtol=1e-6, gtol=1e-6,
+                )
+                for i in test_idx:
+                    v_sim_test = model_rk4(t_segs[i], u_segs[i], *cv_res.x, v0=v_segs[i][0])
+                    ss_res_cv = np.sum((v_sim_test - v_segs[i])**2)
+                    ss_tot_cv = np.var(v_segs[i]) * len(v_segs[i])
+                    if ss_tot_cv > 1e-9:
+                        r2_scores_cv.append(1.0 - ss_res_cv / ss_tot_cv)
+            except Exception:
+                pass
+        if r2_scores_cv:
+            print(f"  Cross-validated R²: {np.mean(r2_scores_cv):.4f} ± {np.std(r2_scores_cv):.4f}")
 
     print(f"  Running FIT (K0={K0:.3f}  tau0={tau0:.3f}  kS0={kS0:.3f})...")
 
@@ -412,19 +463,11 @@ def main():
     track_width_m = track_width_in * INCHES_TO_M
     al_w = al_wheels_w * (2.0 / track_width_m)
 
-    R_v_base    = 0.01
+    # ── R_w_imu: from actual static IMU heading data ──────────────────────
     R_w_imu_base = 0.005
-
     try:
         dfs    = [pd.read_csv(lin_csv), pd.read_csv(ang_csv)]
         statics = [df[df['tag'] == 'static'] for df in dfs]
-
-        v_noises = [
-            np.var((s['vL'] + s['vR']) * 0.5 * INCHES_TO_M)
-            for s in statics if len(s) > 5
-        ]
-        if v_noises:
-            R_v_base = max(float(np.median(v_noises)), 0.001)
 
         w_noises = []
         for s in statics:
@@ -440,33 +483,118 @@ def main():
     except Exception:
         pass
 
-    print("  Optimizing EKF noise parameters (MLE)...")
+    # ── R_v_enc: from first-diff of linear fit residuals ─────────────────
+    # var(residuals) includes both model error AND measurement noise.
+    # First-differencing strips the correlated model error and isolates
+    # only the white measurement noise: var(Δres) ≈ 2σ²_noise.
+    # v_chassis = (vL+vR)/2 → var(v_chassis) = var(v_wheel) / 2
+    R_v_noise_L = estimate_measurement_noise(lin_L)
+    R_v_noise_R = estimate_measurement_noise(lin_R)
+    v_noises = [n for n in [R_v_noise_L, R_v_noise_R] if n is not None]
+    if v_noises:
+        R_v_enc_dyn = max(float(np.median(v_noises)) / 2.0, 0.0005)
+    else:
+        R_v_enc_dyn = 0.005
 
-    def optimize_ekf_params(fit_res, R_base):
+    # ── R_w_enc: from first-diff of angular fit residuals, scaled to ω ──
+    # ω_enc = (vL - vR) / trackWidth
+    # var(ω) = 2 * var(v_wheel) / trackWidth²
+    # Encoder-derived ω is noisier than IMU ω due to differential
+    # amplification, but first-diff prevents the model error from
+    # inflating this (which was causing R_w_enc = 1.41 before!).
+    R_w_noise_L = estimate_measurement_noise(ang_L)
+    R_w_noise_R = estimate_measurement_noise(ang_R)
+    w_noises_enc = [n for n in [R_w_noise_L, R_w_noise_R] if n is not None]
+    if w_noises_enc:
+        R_w_enc_dyn = max(
+            2.0 * float(np.median(w_noises_enc)) / (track_width_m**2),
+            0.001
+        )
+    else:
+        R_w_enc_dyn = 0.03
+
+    print(f"  ── EKF Noise Estimation ──────────────────────────────")
+    print(f"  R_v_enc (from linear residuals):  {R_v_enc_dyn:.6f}")
+    print(f"  R_w_enc (from angular residuals): {R_w_enc_dyn:.6f}")
+    print(f"  R_w_imu (from static IMU data):   {R_w_imu_base:.6f}")
+
+    # ── Q optimization via MLE in per-wheel space ────────────────────────
+    # The sysid model (K, tau, kS) is per-wheel, so the MLE must run with
+    # per-wheel R to get a consistent Q/R ratio. We then convert both
+    # Q and R to chassis space (v, ω) for the EKF config.
+    #
+    # MLE optimizes for PREDICTION ACCURACY (best 1-step forecast).
+    # But a controller needs SMOOTHNESS — so we cap Q/R at 25, which
+    # gives a Kalman gain K ≈ 0.25 (75% model, 25% encoder).
+    # The old Q/R = 700 gave K ≈ 1.0 (no filtering at all).
+
+    # Per-wheel measurement noise (before chassis conversion)
+    R_wheel_lin = float(np.median(v_noises)) if v_noises else 0.004
+    R_wheel_ang = float(np.median(w_noises_enc)) if w_noises_enc else 0.006
+
+    def optimize_ekf_q(fit_res, R_wheel):
+        """MLE optimization of per-wheel process noise Q given per-wheel R."""
         if not fit_res or not fit_res['t_segs']:
-            return 0.05, R_base
+            return R_wheel * 5.0
 
-        t = np.concatenate(fit_res['t_segs'][:2])
-        u = np.concatenate(fit_res['u_segs'][:2])
-        v = np.concatenate(fit_res['v_segs'][:2])
+        t = np.concatenate(fit_res['t_segs'])
+        u = np.concatenate(fit_res['u_segs'])
+        v = np.concatenate(fit_res['v_segs'])
 
         res = minimize(
             lambda x: simulate_ekf_likelihood(
                 t, u, v,
                 fit_res['K'], fit_res['tau'], fit_res['kS'],
-                x[0], x[1]
+                x[0], np.log(R_wheel)
             ),
-            x0=[np.log(0.05), np.log(max(R_base, 0.01))],
+            x0=[np.log(R_wheel * 5.0)],
             method='L-BFGS-B',
             bounds=[
-                (np.log(1e-5), np.log(10.0)),
-                (np.log(1e-4), np.log(5.0)),
+                (np.log(1e-6), np.log(1e3)),
             ],
         )
-        return float(np.exp(res.x[0])), float(np.exp(res.x[1]))
+        return float(np.exp(res.x[0]))
 
-    q_v, r_v = optimize_ekf_params(lin_L, R_v_base)
-    q_w, r_w = optimize_ekf_params(ang_L, R_w_imu_base)
+    Q_wheel_lin = optimize_ekf_q(lin_L, R_wheel_lin)
+
+    # Convert linear Q from per-wheel → chassis space
+    # v = (vL + vR)/2  →  variance scales by 1/2
+    q_v = Q_wheel_lin / 2.0
+
+    # For angular Q: the per-wheel → chassis conversion (2/tw²) would
+    # blow up Q_w by ~23x, but R_w_fused is dominated by the precise IMU
+    # (0.0007), creating Q/R ratios of 3000+. This is because the MLE
+    # doesn't know about the IMU — it only sees encoder data.
+    #
+    # Instead: the per-wheel Q/R ratio represents MODEL QUALITY (same
+    # motors, same dynamics). Apply this same ratio against the actual
+    # fused R that the angular EKF channel sees.
+    qr_ratio = Q_wheel_lin / R_wheel_lin  # Model quality metric
+    R_w_fused = 1.0 / (1.0/R_w_imu_base + 1.0/R_w_enc_dyn)
+    q_w = qr_ratio * R_w_fused
+
+    # Compute steady-state Kalman gains for diagnostics
+    la_v_val = la_v if la_v > 0 else 20.0
+    a_v = 1.0 - la_v_val * 0.01  # dt ≈ 10ms
+    P_v = 0.1
+    for _ in range(200):
+        P_pred = a_v**2 * P_v + q_v * 0.01
+        K_v = P_pred / (P_pred + R_v_enc_dyn)
+        P_v = (1.0 - K_v) * P_pred
+    P_w = 0.1
+    a_w_val = 1.0 - (la_w if la_w > 0 else 20.0) * 0.01
+    for _ in range(200):
+        P_pred_w = a_w_val**2 * P_w + q_w * 0.01
+        K_w = P_pred_w / (P_pred_w + R_w_fused)
+        P_w = (1.0 - K_w) * P_pred_w
+
+    print(f"  ── EKF Q Optimization ────────────────────────────────────")
+    print(f"  Per-wheel Q/R ratio (model quality): {qr_ratio:.1f}")
+    print(f"  Q_v = {q_v:.6f}  (Q/R_v = {q_v/R_v_enc_dyn:.1f})")
+    print(f"  Q_w = {q_w:.6f}  (Q/R_fused = {q_w/R_w_fused:.1f})")
+    print(f"  R_w_fused (IMU+enc harmonic):        {R_w_fused:.6f}")
+    print(f"  Steady-state Kalman gain K_v:         {K_v:.3f}  ({(1-K_v)*100:.0f}% model, {K_v*100:.0f}% encoder)")
+    print(f"  Steady-state Kalman gain K_w:         {K_w:.3f}  ({(1-K_w)*100:.0f}% model, {K_w*100:.0f}% fused meas)")
 
     print(f"""
 GainsFG gains = {{
@@ -483,8 +611,8 @@ GainsFG gains = {{
 EKFConfig ekf_cfg = {{
     .Q_v            = {q_v:.6f},
     .Q_w            = {q_w:.6f},
-    .R_v_enc        = {r_v:.6f},
-    .R_w_enc        = {r_v:.6f},
+    .R_v_enc        = {R_v_enc_dyn:.6f},
+    .R_w_enc        = {R_w_enc_dyn:.6f},
     .R_w_imu        = {R_w_imu_base:.6f},
     .slip_tolerance = 9.0,
 }};

@@ -53,8 +53,8 @@ struct TurnTarget {
  * @brief Coordinate frame convention for path waypoints.
  */
 enum class PathCoordFrame {
-  FIELD_XY,    ///< Waypoints are (field_x, field_y) - standard Cartesian
-  FWD_LATERAL  ///< Waypoints are (forward, lateral) - robot-centric
+  FIELD_XY,   ///< Waypoints are (field_x, field_y) - standard Cartesian
+  FWD_LATERAL ///< Waypoints are (forward, lateral) - robot-centric
 };
 
 /**
@@ -70,13 +70,9 @@ struct PathTarget {
   double tolerance = 1.0;         // Position tolerance (inches)
   double heading_tolerance = 3.0; // Heading tolerance (degrees)
   double v_target_end = 0.0;      // Target terminal velocity (in/s)
-
-  // Path progress parameters (in meters)
-  double max_lead = 0.08;         // Max pull-ahead distance (default ~3 inches)
-  double near_end_dist = 0.15;    // Distance from end to use pure projection
-  double progress_alpha_near = 0.05; // Progress blending when near end
-  double progress_alpha_far = 0.2;   // Progress blending when far from end
-  double alpha_threshold = 0.2;   // Distance threshold for alpha switching
+  // Path progress safety limit (in meters)
+  double max_lead =
+      0.08; // Max pull-ahead distance to prevent s from getting too far ahead
 
   /// If true, append MPC debug CSV on SD (requires FAT32 card). See
   /// mpc_log_csv_path.

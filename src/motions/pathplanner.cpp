@@ -159,10 +159,10 @@ Pose PathPlanner::computePose(int segment_idx, double t) const {
   }
 
   PathVec2 ddp = segments_[segment_idx].secondDerivative(t);
-	double num = std::abs(dp.x * ddp.y - dp.y * ddp.x);
-	double denom = std::pow(dp.x * dp.x + dp.y * dp.y, 1.5);
-	double curvature = (denom < 1e-10) ? 0.0 : num / denom;
-	return {p.x, p.y, theta, curvature};
+  double num = std::abs(dp.x * ddp.y - dp.y * ddp.x);
+  double denom = std::pow(dp.x * dp.x + dp.y * dp.y, 1.5);
+  double curvature = (denom < 1e-10) ? 0.0 : num / denom;
+  return {p.x, p.y, theta, curvature};
 }
 
 // Overload that handles flip flags
@@ -240,98 +240,104 @@ void PathPlanner::buildSegments(const std::vector<PathWaypoint> &waypoints) {
 }
 
 PathVec2 PathPlanner::BezierSegment::secondDerivative(double t) const {
-    double u = 1.0 - t;
-    PathVec2 ddp = (p2 - p1 - (p1 - p0)) * (6.0 * u);
-    ddp += (p3 - p2 - (p2 - p1)) * (6.0 * t);
-    return ddp;
+  double u = 1.0 - t;
+  PathVec2 ddp = (p2 - p1 - (p1 - p0)) * (6.0 * u);
+  ddp += (p3 - p2 - (p2 - p1)) * (6.0 * t);
+  return ddp;
 }
 
 double PathPlanner::getCurvature(double s) const {
-    if (segments_.empty()) return 0.0;
-    
-    s = std::clamp(s, 0.0, total_length_);
-    
-    // Find segment
-    int segment_idx = 0;
-    for (size_t i = 0; i < segments_.size(); ++i) {
-        if (s < accumulated_length_[i + 1]) {
-            segment_idx = i;
-            break;
-        }
+  if (segments_.empty())
+    return 0.0;
+
+  s = std::clamp(s, 0.0, total_length_);
+
+  // Find segment
+  int segment_idx = 0;
+  for (size_t i = 0; i < segments_.size(); ++i) {
+    if (s < accumulated_length_[i + 1]) {
+      segment_idx = i;
+      break;
     }
-    
-    double s_local = s - accumulated_length_[segment_idx];
-    const auto &seg = segments_[segment_idx];
-    
-    // Newton's method to find t
-    double t = s_local / seg.length;
-    for (int iter = 0; iter < 4; ++iter) {
-        double err = computeArcLengthGauss(seg, 0.0, t) - s_local;
-        double dt = seg.derivative(t).norm();
-        if (std::abs(dt) < 1e-6) break;
-        t -= err / dt;
-        t = std::clamp(t, 0.0, 1.0);
-    }
-    
-    // Curvature: κ = |x'y'' - y'x''| / (x'² + y'²)^(3/2)
-    PathVec2 d1 = seg.derivative(t);
-    PathVec2 d2 = seg.secondDerivative(t);
-    
-    double numerator = std::abs(d1.x * d2.y - d1.y * d2.x);
-    double denominator = std::pow(d1.x * d1.x + d1.y * d1.y, 1.5);
-    
-    if (denominator < 1e-10) return 0.0;
-    
-    return numerator / denominator;
+  }
+
+  double s_local = s - accumulated_length_[segment_idx];
+  const auto &seg = segments_[segment_idx];
+
+  // Newton's method to find t
+  double t = s_local / seg.length;
+  for (int iter = 0; iter < 4; ++iter) {
+    double err = computeArcLengthGauss(seg, 0.0, t) - s_local;
+    double dt = seg.derivative(t).norm();
+    if (std::abs(dt) < 1e-6)
+      break;
+    t -= err / dt;
+    t = std::clamp(t, 0.0, 1.0);
+  }
+
+  // Curvature: κ = |x'y'' - y'x''| / (x'² + y'²)^(3/2)
+  PathVec2 d1 = seg.derivative(t);
+  PathVec2 d2 = seg.secondDerivative(t);
+
+  double numerator = std::abs(d1.x * d2.y - d1.y * d2.x);
+  double denominator = std::pow(d1.x * d1.x + d1.y * d1.y, 1.5);
+
+  if (denominator < 1e-10)
+    return 0.0;
+
+  return numerator / denominator;
 }
 
-double PathPlanner::projectFromPosition(double x, double y, double s_hint) const {
-    if (segments_.empty()) return 0.0;
-    
-    // Start search from hint
-    double s_best = std::clamp(s_hint, 0.0, total_length_);
-    double dist_best = std::numeric_limits<double>::max();
-    
-    // Search nearby segment
-    int segment_idx = 0;
-    for (size_t i = 0; i < segments_.size(); ++i) {
-        if (s_best < accumulated_length_[i + 1]) {
-            segment_idx = i;
-            break;
-        }
+double PathPlanner::projectFromPosition(double x, double y,
+                                        double s_hint) const {
+  if (segments_.empty())
+    return 0.0;
+
+  // Start search from hint
+  double s_best = std::clamp(s_hint, 0.0, total_length_);
+  double dist_best = std::numeric_limits<double>::max();
+
+  // Search nearby segment
+  int segment_idx = 0;
+  for (size_t i = 0; i < segments_.size(); ++i) {
+    if (s_best < accumulated_length_[i + 1]) {
+      segment_idx = i;
+      break;
     }
-    
-    // Newton iteration to minimize distance to path
-    double s = s_best;
-    for (int iter = 0; iter < 10; ++iter) {
-        Pose pose = getPose(s);
-        double dx = x - pose.x;
-        double dy = y - pose.y;
-        
-        // Distance squared
-        double dist_sq = dx * dx + dy * dy;
-        if (dist_sq < dist_best) {
-            dist_best = dist_sq;
-            s_best = s;
-        }
-        
-        // Gradient: d(dist)/ds ≈ -tangent · (point - pose)
-        // tangent = (sin(theta), cos(theta)) for compass heading
-        double tangent_x = std::sin(pose.theta);
-        double tangent_y = std::cos(pose.theta);
-        double grad = -(tangent_x * dx + tangent_y * dy);
-        
-        // Hessian approximation (second derivative of distance)
-        double hess = 1.0; // Simplified: assume unit curvature
-        
-        double ds = -grad / hess;
-        s += ds * 0.5; // Damped update
-        
-        // Clamp to valid range
-        s = std::clamp(s, 0.0, total_length_);
-        
-        if (std::abs(ds) < 1e-4) break;
+  }
+
+  // Newton iteration to minimize distance to path
+  double s = s_best;
+  for (int iter = 0; iter < 10; ++iter) {
+    Pose pose = getPose(s);
+    double dx = x - pose.x;
+    double dy = y - pose.y;
+
+    // Distance squared
+    double dist_sq = dx * dx + dy * dy;
+    if (dist_sq < dist_best) {
+      dist_best = dist_sq;
+      s_best = s;
     }
-    
-    return s_best;
+
+    // Gradient: d(dist)/ds ≈ -tangent · (point - pose)
+    // tangent = (sin(theta), cos(theta)) for compass heading
+    double tangent_x = std::sin(pose.theta);
+    double tangent_y = std::cos(pose.theta);
+    double grad = -(tangent_x * dx + tangent_y * dy);
+
+    // Hessian approximation (second derivative of distance)
+    double hess = 1.0; // Simplified: assume unit curvature
+
+    double ds = -grad / hess;
+    s += ds * 0.5; // Damped update
+
+    // Clamp to valid range
+    s = std::clamp(s, 0.0, total_length_);
+
+    if (std::abs(ds) < 1e-4)
+      break;
+  }
+
+  return s_best;
 }
