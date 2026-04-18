@@ -1,7 +1,7 @@
 #pragma once
 
 #include "chassis.hpp"
-#include "mpcc_controller.hpp"
+#include "ilqr_controller.hpp"
 #include "mpcc_sd_log.hpp"
 #include "odom/odom.hpp"
 #include "pathplanner.hpp"
@@ -53,20 +53,31 @@ struct TurnTarget {
  * @brief Coordinate frame convention for path waypoints.
  */
 enum class PathCoordFrame {
-  FIELD_XY,   ///< Waypoints are (field_x, field_y) - standard Cartesian
-  FWD_LATERAL ///< Waypoints are (forward, lateral) - robot-centric
+  FIELD_XY,    ///< Waypoints are (field_x, field_y) - standard Cartesian
+  FWD_LATERAL  ///< Waypoints are (forward, lateral) - robot-centric
 };
 
 /**
  * @brief Parameters for a Path-to-Path movement.
+ * Uses PathWaypoint which supports flip_heading for reverse motion segments.
+ * Usage: PathTarget target; target.waypoints = {{x, y}, {x, y, true}, ...};
  */
 struct PathTarget {
-  std::vector<PathVec2> waypoints; // inches
-  MPCC_Controller::Weights weights;
+  std::vector<PathWaypoint> waypoints; // inches (flip_heading=true for reverse)
+  ILQR_Controller::Weights weights;
   /// MPC u bounds: v, vs in m/s; w in rad/s (same as acados/Python lbu/ubu).
-  MPCC_Controller::ControlBounds mpc_control_bounds{};
-  double tolerance;          // inches
-  double v_target_end = 0.0; // Target terminal velocity (in/s)
+  ILQR_Controller::Bounds control_bounds{};
+  double tolerance = 1.0;         // Position tolerance (inches)
+  double heading_tolerance = 3.0; // Heading tolerance (degrees)
+  double v_target_end = 0.0;      // Target terminal velocity (in/s)
+
+  // Path progress parameters (in meters)
+  double max_lead = 0.08;         // Max pull-ahead distance (default ~3 inches)
+  double near_end_dist = 0.15;    // Distance from end to use pure projection
+  double progress_alpha_near = 0.05; // Progress blending when near end
+  double progress_alpha_far = 0.2;   // Progress blending when far from end
+  double alpha_threshold = 0.2;   // Distance threshold for alpha switching
+
   /// If true, append MPC debug CSV on SD (requires FAT32 card). See
   /// mpc_log_csv_path.
   bool log_mpc_to_sd = false;
@@ -80,8 +91,8 @@ struct PathTarget {
   double intake_offset = 0.0;
   /// Slew rate limits (per 10ms tick) - prevents jittery oscillation on real
   /// hardware
-  double max_dw_per_tick = 2.0; // rad/s per tick (default: 200 rad/s²)
-  double max_dv_per_tick = 0.3; // m/s per tick (default: 30 m/s²)
+  double max_dw_per_tick = 2.0; // rad/s per tick (default: 200 rad/s^2)
+  double max_dv_per_tick = 0.3; // m/s per tick (default: 30 m/s^2)
 };
 
 /**
@@ -97,7 +108,7 @@ public:
    * @param pf Reference to initialized ParticleFilter.
    */
   MotionManager(Chassis &chassis, ParticleFilter &pf,
-                MPCC_Controller &mpcc_controller);
+                ILQR_Controller &ilqr_controller);
 
   /**
    * @brief Start a Point-to-Point movement.
@@ -120,6 +131,7 @@ public:
    * @brief Stop current motion and clear targets.
    */
   void cancelMotion();
+  void shutdown();
 
   /**
    * @brief Check if target is reached.
@@ -153,7 +165,9 @@ public:
 
   /**
    * @brief Start a Path-to-Path movement.
-   * @param target The target path to follow.
+   * @param target The target path to follow. Waypoints use PathWaypoint type.
+   *               Set flip_heading=true on any waypoint to reverse heading
+   *               180 degrees after that point (for backwards motion).
    */
   void followPath(PathTarget target);
 
@@ -171,9 +185,10 @@ public:
 private:
   Chassis &chassis;
   ParticleFilter &pf;
-  MPCC_Controller &mpcc_controller;
+  ILQR_Controller &ilqr_controller;
 
   std::atomic<MotionState> state{MotionState::IDLE};
+  std::atomic<bool> shutdown_requested{false};
 
   PointTarget current_point;
   TurnTarget current_turn;
@@ -184,8 +199,8 @@ private:
   Slew w_slew = {500};
 
   PathTarget current_path;
-  double current_mpcc_s = 0.0;
-  MPCC_Controller::Control prev_mpcc_u = {0.0, 0.0, 0.0};
+  double current_ilqr_s = 0.0;
+  ILQR_Controller::Control prev_ilqr_u = {0.0, 0.0, 0.0};
   MPCC_SdLog mpc_sd_log_;
 
   // Helper for angle wrapping

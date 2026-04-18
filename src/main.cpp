@@ -2,10 +2,10 @@
 #include "chassis.hpp"
 #include "liblvgl/lvgl.h"
 #include "motions/motion.hpp"
-#include "motions/mpcc_controller.hpp"
+#include "motions/ilqr_controller.hpp"
 #include "motions/pathplanner.hpp"
 #include "motions/sysid.hpp"
-#include "mpcc/acados_solver_mpcc.h"
+// #include "mpcc/acados_solver_mpcc.h" // Not needed for iLQR
 #include "odom/odom.hpp"
 #include <vector>
 
@@ -35,20 +35,21 @@ std::vector<SensorConfig> sc = {};
 
 PFConfig pfc = {.distance_sensor_stddev = 0.83f,
                 .motion_distance_stddev = 0.001f,
-                .kinetic_friction = 68.0315337,
+                .kinetic_friction = 100.0315337,
                 .max_drift_speed = 41.0f,
                 .motion_heading_stddev = 0.001f,
                 .uniform_noise_probability = 1.0f / 78.74016f,
                 .random_particle_probability = 0.005f,
                 .resampling_threshold = 0.5f,
-                .max_time_before_resample = 0.05f};
+                .max_time_before_resample = 0.05f,
+                .degeneracy_timeout = 0.5f};
 
-ParticleFilter pf(500, sc, pfc, -36.2, 45.1, 0); 
+ParticleFilter pf(500, sc, pfc, -44.9, 13.9, 90); 
 
-MPCC_Controller mpcc_controller(
+ILQR_Controller ilqr_controller(
     5.0, 0.05); 
 
-MotionManager motions(chassis, pf, mpcc_controller);
+MotionManager motions(chassis, pf, ilqr_controller);
 
 // --- LVGL UI Objects ---
 lv_obj_t *status_label = nullptr;
@@ -60,7 +61,7 @@ lv_obj_t *r_vel_label = nullptr;
 
 // --- Task Functions ---
 pros::Task *motion_task = nullptr;
-lv_timer_t *ui_timer = nullptr;
+lv_timer_t *ui_timer = nullptr; 
 
 void ui_timer_cb(lv_timer_t *timer) {
   Estimate est = pf.estimate();
@@ -125,10 +126,12 @@ void initialize() {
                                   {-70.5, 70.5, -70.5, -70.5}};
   pf.set_map(segs);
 
-  mpcc_controller.setFrictionCoefficient(5.0);
+  ilqr_controller.setFrictionCoeff(5.0);
 
-  // Start the unified Odom + Motion task
-  motion_task = new pros::Task(motion_task_fn, &motions, "Motion Task");
+  // Ensure we don't create multiple tasks if initialize runs again
+  if (motion_task == nullptr) {
+    motion_task = new pros::Task(motion_task_fn, &motions, "Motion Task");
+  }
 
   lv_lock();
 
@@ -222,49 +225,56 @@ void autonomous() {
 
   // motions.cancelMotion();
 
+  // PathTarget target1;
+  // target1.waypoints.push_back({0, 0});
+  // target1.waypoints.push_back({-40.5, 44.0});  // intermediate
+  // target1.waypoints.push_back({-32.4, 47.1});  // intermediate
+  // target1.waypoints.push_back({-21.8, 47.3, true});   // end
   PathTarget target1;
-  target1.waypoints.push_back({-36.2, 45.1});
-  target1.waypoints.push_back({-31.5, 53.2}); // intermediate
-  target1.waypoints.push_back({-12.8, 57.7}); // intermediate
-  target1.waypoints.push_back({-2.4, 57.3});  // intermediate
-  target1.waypoints.push_back({9.1, 57.3});   // intermediate
-  target1.waypoints.push_back({20.8, 59.9});  // intermediate
-  target1.waypoints.push_back({33.1, 55.9});  // intermediate
-  target1.waypoints.push_back({35.2, 50.5});  // intermediate
-  target1.waypoints.push_back({22.5, 47.1});  // end
+  target1.waypoints.push_back({-44.9, 13.9});
+  target1.waypoints.push_back({-22.2, 22.2});  // intermediate
+  target1.waypoints.push_back({-3.8, 46.5});   // end
+
+
+
+
+
 
   target1.v_target_end = 0;
 
-  target1.max_dw_per_tick = 0.5; 
+  target1.max_dw_per_tick = 0.245; 
   target1.max_dv_per_tick = 0.075; 
-  target1.weights.q_pos = 5.0;   
-  target1.weights.q_heading = 2.0; 
-  target1.weights.q_cross = 6.0; 
-  target1.weights.q_progress = 1.5; 
+  target1.weights.q_pos = 15.0;   
+  target1.weights.q_heading = 3; 
+  target1.weights.q_cross = 4.0; 
+  target1.weights.q_progress = 5.0; 
   target1.weights.q_vy = 2.0; 
 
-  target1.weights.w_dv = 10.0;  
-  target1.weights.w_dw = 10.0;  
+  target1.weights.w_dv = 100.0;  
+  target1.weights.w_dw = 100.0;  
   target1.weights.w_dvs = 2.0; 
 
-  target1.weights.w_v = 6.0;   
-  target1.weights.v_ref = 0.8; 
+  target1.weights.w_v = 2.5;   
+  target1.weights.v_ref = 0; 
+  target1.weights.w_w = 2.5;
 
   target1.weights.q_pos_N = 100.0;     
   target1.weights.q_heading_N = 150.0; 
   target1.weights.q_cross_N = 80.0;    
   target1.weights.q_vy_N = 40.0;       
 
-  target1.weights.s_trust = 0.3;         
-  target1.weights.kappa_threshold = 4.0; 
-  target1.intake_offset = 7.0;
+  target1.weights.s_trust = 0.15; 
+  target1.weights.s_trust_penalty = 25;  
+  target1.intake_offset = 4.5;
   target1.tolerance = 1.0;
+  
 
-  target1.mpc_control_bounds.vs_max = 1.5;
-  target1.mpc_control_bounds.w_max = 7.75;
-  target1.mpc_control_bounds.w_min = -7.75;
-  target1.mpc_control_bounds.v_min = -0.3;
-  target1.mpc_control_bounds.v_max = 1.2;
+  target1.control_bounds.vs_max = 1.2;
+  target1.control_bounds.max_wheel_speed = 1.3;
+  target1.control_bounds.min_wheel_speed = -1.3;
+
+  target1.tolerance = 2.5;
+  target1.heading_tolerance = 4;
 
   target1.log_mpc_to_sd = true;
 
@@ -285,11 +295,22 @@ void opcontrol() {
   pros::Controller master(pros::E_CONTROLLER_MASTER);
 
   if (motion_task) {
-    motion_task->remove();
+    motions.shutdown();
+    pros::delay(50);
     delete motion_task;
     motion_task = nullptr;
-    pros::delay(100);
+  } else {
+    // Fallback: search by name just in case
+    pros::task_t t_handle = pros::c::task_get_by_name("Motion Task");
+    if (t_handle != nullptr) {
+      motions.shutdown();
+      pros::Task orphan(t_handle);
+      orphan.remove();
+    }
   }
+  pros::delay(50);
+
+
 
   // Kill the dedicated UI timer if you want to stop screen updates in
   // opcontrol if (ui_timer) {
@@ -338,6 +359,8 @@ void opcontrol() {
 
     int left = master.get_analog(ANALOG_LEFT_Y);
     int right = master.get_analog(ANALOG_RIGHT_Y);
+
+    std::cout << "running" << std::endl;
 
     chassis.tank(left * 94.488189, right * 94.488189);
 

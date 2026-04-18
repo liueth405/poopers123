@@ -10,6 +10,7 @@ struct Pose {
   double x;
   double y;
   double theta;
+	double curvature = 0.0; // Optional: path curvature at this point
 };
 
 // Internal ultra-fast 2D vector (Zero allocations, inlineable)
@@ -26,6 +27,14 @@ struct PathVec2 {
   double norm() const { return std::sqrt(x * x + y * y); }
 };
 inline PathVec2 operator*(double s, const PathVec2& v) { return {v.x * s, v.y * s}; }
+ // Waypoint with optional heading flip (for reverse approach/exit)
+ struct PathWaypoint {
+ double x{0.0};
+ double y{0.0};
+ bool flip_heading{false}; // If true, tangent direction is reversed 180°
+ PathWaypoint() = default;
+ PathWaypoint(double _x, double _y, bool _flip = false) : x(_x), y(_y), flip_heading(_flip) {}
+ };
 
 class PathPlanner {
 private:
@@ -34,14 +43,17 @@ private:
     double length;
     PathVec2 evaluate(double t) const;
     PathVec2 derivative(double t) const;
+PathVec2 secondDerivative(double t) const;
   };
 
   std::vector<BezierSegment> segments_;
   std::vector<double> accumulated_length_;
+ std::vector<bool> segment_flip_; // Flip heading for each segment
   double total_length_;
 
   double computeArcLengthGauss(const BezierSegment &seg, double a, double b) const;
   void buildSegments(const std::vector<PathVec2> &waypoints);
+ void buildSegments(const std::vector<PathWaypoint> &waypoints);
   Pose computePose(int segment_idx, double t) const;
 
 public:
@@ -65,7 +77,17 @@ public:
     buildSegments(fast_waypoints);
   }
 
+ // Takes PathWaypoint with flip flags
+ void setWaypoints(const std::vector<PathWaypoint> &waypoints) {
+ if (waypoints.size() < 2) {
+ throw std::invalid_argument("Need at least 2 waypoints");
+ }
+ buildSegments(waypoints);
+ }
+
   double getTotalLength() const { return total_length_; }
+double getCurvature(double s) const; // Get curvature at arc length s
+double projectFromPosition(double x, double y, double s_hint) const; // Project position to path
   Pose getPose(double s) const;
   Pose getPose(double s, int& last_index) const; // Optimized O(1) lookup
 };

@@ -14,8 +14,8 @@ COLDSRCDIR=$(ROOT)/cold_src
 INCDIR=$(ROOT)/include
 
 WARNFLAGS+=
-EXTRA_CFLAGS=
-EXTRA_CXXFLAGS=
+EXTRA_CFLAGS=-O3
+EXTRA_CXXFLAGS=-O3
 
 # Add third-party include directories to the search path
 # This allows using <blasfeo_target.h> instead of "blasfeo/blasfeo_target.h"
@@ -29,7 +29,7 @@ USE_PACKAGE:=1
 
 # Add libraries you do not wish to include in the cold image here
 # EXCLUDE_COLD_LIBRARIES:= $(FWDIR)/your_library.a
-EXCLUDE_COLD_LIBRARIES:= 
+EXCLUDE_COLD_LIBRARIES:=
 # Add our custom cold math library to the links
 LIBAR = $(BINDIR)/$(LIBNAME).a
 LIBRARIES += $(LIBAR)
@@ -37,7 +37,7 @@ COLD_LIBRARIES += $(LIBAR) $(BINDIR)/cold_math.cpp.o
 
 # Set this to 1 to add additional rules to compile your project as a PROS library template
 IS_LIBRARY:=0
-# TODO: CHANGE THIS! 
+# TODO: CHANGE THIS!
 # Be sure that your header files are in the include directory inside of a folder with the
 # same name as what you set LIBNAME to below.
 LIBNAME:=libbest
@@ -60,10 +60,11 @@ ELF_DEPS := $(addprefix $(BINDIR)/,$(patsubst $(SRCDIR)/%,%.o,$(ELF_DEPS)))
 # First get standard src/ objects using standard PROS wildcards:
 # We EXCLUDE the files we are actively tuning to keep them in the HOT package for fast uploads.
 HOT_FILES = $(BINDIR)/main.cpp.o \
-            $(BINDIR)/motions/motion.cpp.o \
-            $(BINDIR)/motions/mpcc_controller.cpp.o \
-            $(BINDIR)/motions/mpcc_sd_log.cpp.o \
-            $(BINDIR)/motions/pathplanner.cpp.o
+	$(BINDIR)/motions/motion.cpp.o \
+	$(BINDIR)/motions/mpcc_controller.cpp.o \
+	$(BINDIR)/motions/ilqr_controller.cpp.o \
+	$(BINDIR)/motions/mpcc_sd_log.cpp.o \
+	$(BINDIR)/motions/pathplanner.cpp.o
 
 LIB_OBJS = $(filter-out $(HOT_FILES), $(ELF_DEPS))
 # Add our custom cold code explicitly:

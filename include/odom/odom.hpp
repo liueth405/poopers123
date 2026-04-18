@@ -44,6 +44,12 @@ struct PFConfig {
   float random_particle_probability = 0.005f;
   float resampling_threshold = 0.01f;
   float max_time_before_resample = 1.0f;
+  // Degeneracy detection: resample if ESS < ess_threshold for
+  // degeneracy_timeout seconds
+  float ess_threshold =
+      0.5f; // Fraction of num_particles (0.5 = half of particles effective)
+  float degeneracy_timeout =
+      0.3f; // Seconds of degeneracy before forced resample
 };
 
 struct Sensor {
@@ -439,6 +445,7 @@ class ParticleFilter {
   float max_range_threshold = 77.5f;
 
   float time = 0.5f;
+  float degeneracy_time = 0.0f; // Time spent with ESS below threshold
 
   static void anglewrap(float &angle) {
     angle = std::fmod(angle + PI, PI2);
@@ -538,6 +545,7 @@ public:
       psa[i] = std::sin(t);
     }
     accumulated_distance = 0.0f;
+    degeneracy_time = 0.0f;
     refresh_trig();
   }
 
@@ -615,14 +623,39 @@ public:
       }
     }
 
-    if (accumulated_distance < cfg.resampling_threshold ||
-        time <= cfg.max_time_before_resample) {
-      time += dt;
-      return;
+    // Compute Effective Sample Size (ESS) = 1 / sum(w_i^2)
+    // ESS measures how many particles effectively contribute
+    // ESS = N when all weights equal, ESS = 1 when one particle dominates
+    float weight_sq_sum = 0.0f;
+    for (size_t i = 0; i < num_particles; ++i) {
+      weight_sq_sum += pw[i] * pw[i];
     }
-    time = 0;
-    accumulated_distance = 0.0f;
-    resample();
+    float ess = 1.0f / (weight_sq_sum + 1e-10f);
+    float ess_threshold_count = cfg.ess_threshold * (float)num_particles;
+
+    // Track degeneracy time
+    bool is_degenerate = (ess < ess_threshold_count);
+    if (is_degenerate) {
+      degeneracy_time += dt;
+    } else {
+      degeneracy_time = 0.0f;
+    }
+
+    // Normal resampling conditions (distance traveled and minimum time)
+    bool should_resample = (accumulated_distance >= cfg.resampling_threshold &&
+                            time > cfg.max_time_before_resample);
+
+    // Force resample if degenerate for too long
+    bool forced_resample = (degeneracy_time >= cfg.degeneracy_timeout);
+
+    if (should_resample || forced_resample) {
+      time = 0;
+      accumulated_distance = 0.0f;
+      degeneracy_time = 0.0f;
+      resample();
+    } else {
+      time += dt;
+    }
   }
 
   Estimate estimate() const {
@@ -725,48 +758,28 @@ private:
       // Calculate friction application: f_k * dt (needed for kick clamp too)
       float32x4_t f_k_dt = vmulq_f32(vdupq_n_f32(cfg.kinetic_friction), v_dt);
 
-      // vy_next = vy - clamp(vx * w * dt, -f_k_dt, f_k_dt) - sgn(vy) * f_k_dt
-      // Clamp the centripetal kick so it can't exceed friction per frame.
-      // This prevents runaway accumulation: drift builds up gradually to a
-      // physical terminal velocity rather than going supersonic immediately.
-      float32x4_t raw_kick = vmulq_f32(v_fwd, dh);
-      float32x4_t kick_mag = vabsq_f32(raw_kick);
-      float32x4_t kick_clamped = vminq_f32(kick_mag, f_k_dt);
-      uint32x4_t kick_neg = vcltq_f32(raw_kick, v_zero);
-      float32x4_t centrip_kick =
-          vbslq_f32(kick_neg, vnegq_f32(kick_clamped), kick_clamped);
-      float32x4_t v_pre_fric = vsubq_f32(lv, centrip_kick);
+      // 1. Calculate the raw velocity change from Centripetal Force (vx * omega * dt)
+      float32x4_t v_kick = vmulq_f32(v_fwd, dh);
+      float32x4_t v_pre_friction = vsubq_f32(lv, v_kick);
 
-      // Apply kinetic friction: reduce magnitude towards zero by f_k_dt
-      float32x4_t v_abs_pre = vabsq_f32(v_pre_fric);
-      float32x4_t v_reduced = vsubq_f32(v_abs_pre, f_k_dt);
-      float32x4_t v_clipped = vmaxq_f32(v_zero, v_reduced);
+      // 2. Apply purely resistive Kinetic Friction (f_k * dt)
+      // Friction reduces magnitude and stays at zero; it cannot flip the sign.
+      float32x4_t v_mag = vabsq_f32(v_pre_friction);
+      float32x4_t v_reduced = vsubq_f32(v_mag, f_k_dt);
+      float32x4_t v_clipped = vmaxq_f32(v_zero, v_reduced); // Magnitude cannot be negative
 
-      // Restore sign to the friction-clamped velocity
-      uint32x4_t v_is_neg = vcltq_f32(v_pre_fric, v_zero);
-      float32x4_t lv_raw = vbslq_f32(v_is_neg, vnegq_f32(v_clipped), v_clipped);
+      // 3. Restore the original sign (from v_pre_friction) to the clipped magnitude
+      uint32x4_t is_neg = vcltq_f32(v_pre_friction, v_zero);
+      float32x4_t lv_final = vbslq_f32(is_neg, vnegq_f32(v_clipped), v_clipped);
 
-      // physical stability: lateral drift cannot exceed total forward speed
-      // magnitude. (An omni-wheel robot skating sideways at 45 degrees has |vy|
-      // == |vx|).
-      float32x4_t max_vy_mag = vabsq_f32(v_fwd);
-      float32x4_t lv_mag = vabsq_f32(lv_raw);
-      uint32x4_t is_too_fast = vcgtq_f32(lv_mag, max_vy_mag);
+      // 4. Final deadband and max drift safety clamps
+      const float32x4_t v_threshold = vdupq_n_f32(0.1f);
+      uint32x4_t is_small = vcltq_f32(vabsq_f32(lv_final), v_threshold);
+      float32x4_t lv_new = vbslq_f32(is_small, v_zero, lv_final);
 
-      // If it's too fast, clamp lv_raw to +/- max_vy_mag
-      float32x4_t lv_clamped =
-          vbslq_f32(v_is_neg, vnegq_f32(max_vy_mag), max_vy_mag);
-      float32x4_t lv_final = vbslq_f32(is_too_fast, lv_clamped, lv_raw);
-
-      // final deadband snap
-      const float32x4_t v_threshold = vdupq_n_f32(0.2f);
-      uint32x4_t small_lv = vcltq_f32(vabsq_f32(lv_final), v_threshold);
-      float32x4_t lv_new = vbslq_f32(small_lv, v_zero, lv_final);
-
-      // final global safety clamp
+      // Final global safety clamp (config.max_drift_speed)
       const float32x4_t v_max_drift = vdupq_n_f32(cfg.max_drift_speed);
-      lv_new =
-          vminq_f32(vmaxq_f32(lv_new, vnegq_f32(v_max_drift)), v_max_drift);
+      lv_new = vminq_f32(vmaxq_f32(lv_new, vnegq_f32(v_max_drift)), v_max_drift);
       // lv_new = vbslq_f32(lv_too_big, v_fwd, lv_new);
 
       // add existing slip (lv) to kinematics. d = (v + v0) / 2 * t

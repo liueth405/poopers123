@@ -2,30 +2,34 @@
 #include <cmath>
 
 MotionManager::MotionManager(Chassis &chassis, ParticleFilter &pf,
-                             MPCC_Controller &mpcc_controller)
-    : chassis(chassis), pf(pf), mpcc_controller(mpcc_controller) {}
+                             ILQR_Controller &ilqr_controller)
+    : chassis(chassis), pf(pf), ilqr_controller(ilqr_controller) {
+  shutdown_requested = false;
+}
 
 void MotionManager::followPath(PathTarget target) {
   cancelMotion();
   current_path = target; // Store original (inches) for distance checking
 
-  // Convert Waypoints to Meters for the MPCC Solver
-  std::vector<PathVec2> waypoints_m;
+  // Convert waypoints from inches to meters, preserving flip_heading flags
+  std::vector<PathWaypoint> waypoints_m;
   for (const auto &wp : target.waypoints) {
-    waypoints_m.push_back({wp.x * 0.0254, wp.y * 0.0254});
+    waypoints_m.push_back({wp.x * 0.0254, wp.y * 0.0254, wp.flip_heading});
   }
-  mpcc_controller.setPath(waypoints_m);
+  ilqr_controller.setPath(waypoints_m);
 
-  mpcc_controller.setControlBounds(target.mpc_control_bounds);
+  ILQR_Controller::Bounds bounds = target.control_bounds;
+  bounds.track_width = chassis.get_track_width_m();
+  ilqr_controller.setBounds(bounds);
 
   // target.v_target_end is given in in/s, convert to m/s
-  mpcc_controller.setTerminalTargetVelocity(target.v_target_end * 0.0254);
-  mpcc_controller.setIntakeOffset(target.intake_offset *
+  ilqr_controller.setTerminalVelocity(target.v_target_end * 0.0254);
+  ilqr_controller.setIntakeOffset(target.intake_offset *
                                   0.0254); // Convert inches to meters
-  mpcc_controller.setWeights(target.weights);
+  ilqr_controller.setWeights(target.weights);
 
   Estimate est = pf.estimate();
-  MPCC_Controller::State start_state;
+  ILQR_Controller::State start_state;
   start_state.x = est.x * 0.0254;
   start_state.y = est.y * 0.0254;
   start_state.theta = est.theta_deg * DEG_TO_RAD;
@@ -34,11 +38,9 @@ void MotionManager::followPath(PathTarget target) {
   // Force start at the beginning of the path (s=0)
   start_state.s = 0.0;
 
-  current_mpcc_s = start_state.s;
-  prev_mpcc_u = {chassis.get_linear_velocity() * 0.0254,
+  current_ilqr_s = start_state.s;
+  prev_ilqr_u = {chassis.get_linear_velocity() * 0.0254,
                  chassis.get_angular_velocity(), 0.0};
-
-  mpcc_controller.resetBuffer(start_state);
 
   state = MotionState::FOLLOWING_PATH;
 
@@ -95,6 +97,11 @@ void MotionManager::cancelMotion() {
   mpc_sd_log_.end();
   state = MotionState::IDLE;
   chassis.tank(0, 0);
+}
+
+void MotionManager::shutdown() {
+  shutdown_requested = true;
+  cancelMotion();
 }
 
 void MotionManager::waitUntilPoint(double x, double y, double margin) {
@@ -174,7 +181,7 @@ void MotionManager::loop() {
   uint32_t last_mpc_time = pros::millis();
   uint32_t last_vel_time = pros::millis();
 
-  while (true) {
+  while (!shutdown_requested) {
     chassis.update();
 
     static float prev_heading = 0;
@@ -279,17 +286,21 @@ void MotionManager::loop() {
       }
 
     } else if (state == MotionState::FOLLOWING_PATH) {
-      double path_length_m = mpcc_controller.getPathLength();
-      bool at_path_end =
-          (current_mpcc_s >= path_length_m - 0.02); // 2cm tolerance
+      double path_length_m = ilqr_controller.getPathLength();
       auto last_wp_inches = current_path.waypoints.back();
-      double real_dx = last_wp_inches.x - est.x;
-      double real_dy = last_wp_inches.y - est.y;
+  // Use intake point position for termination check
+  double offset_in = current_path.intake_offset;
+  double cur_th_rad_check = est.theta_deg * DEG_TO_RAD;
+  double intake_x = est.x + offset_in * std::sin(cur_th_rad_check);
+  double intake_y = est.y + offset_in * std::cos(cur_th_rad_check);
+      double real_dx = last_wp_inches.x - intake_x;
+      double real_dy = last_wp_inches.y - intake_y;
+      double tolerance_m = current_path.tolerance * 0.0254; // inches to meters
       double real_dist_to_end =
           std::sqrt(real_dx * real_dx + real_dy * real_dy);
 
       // Calculate final orientation error (Wrapped correctly)
-      Pose final_ref = mpcc_controller.getPathPoseAtS(path_length_m);
+      Pose final_ref = ilqr_controller.getPathPoseAtS(path_length_m);
       double cur_th_rad = (est.theta_deg * DEG_TO_RAD);
       double eth_rad = cur_th_rad - final_ref.theta;
       while (eth_rad > M_PI)
@@ -298,8 +309,9 @@ void MotionManager::loop() {
         eth_rad += 2.0 * M_PI;
       double eth_deg = std::abs(eth_rad * (180.0 / M_PI));
 
-      if ((real_dist_to_end < 2.0 && eth_deg < 5.0) ||
-          (current_mpcc_s >= path_length_m - 0.01)) {
+      if ((real_dist_to_end < current_path.tolerance &&
+           eth_deg < current_path.heading_tolerance) ||
+          (current_ilqr_s >= path_length_m - tolerance_m * 0.5)) {
         mpc_sd_log_.end();
         state = MotionState::IDLE;
         chassis.tank(0, 0);
@@ -317,66 +329,61 @@ void MotionManager::loop() {
         double w_cur = chassis.get_angular_velocity();
         double dt_latency = dt_mpc;
 
-        MPCC_Controller::State mpc_state;
+        ILQR_Controller::State mpc_state;
         mpc_state.theta = (est.theta_deg * DEG_TO_RAD) + (w_cur * dt_latency);
         mpc_state.x =
             (est.x * 0.0254) + (v_cur * std::sin(mpc_state.theta) * dt_latency);
         mpc_state.y =
             (est.y * 0.0254) + (v_cur * std::cos(mpc_state.theta) * dt_latency);
         mpc_state.vy = est.lateral * 0.0254;
-        mpc_state.s = current_mpcc_s;
+        mpc_state.s = current_ilqr_s;
 
-        double s_predicted = current_mpcc_s + prev_mpcc_u.vs * dt_mpc;
+        double s_predicted = current_ilqr_s + prev_ilqr_u.vs * dt_mpc;
         s_predicted =
-            std::clamp(s_predicted, 0.0, mpcc_controller.getPathLength());
+            std::clamp(s_predicted, 0.0, ilqr_controller.getPathLength());
         double offset_m = current_path.intake_offset * 0.0254;
         double xi = mpc_state.x + offset_m * std::sin(mpc_state.theta);
         double yi = mpc_state.y + offset_m * std::cos(mpc_state.theta);
         double s_proj_raw =
-            mpcc_controller.projectSFromPosition(xi, yi, current_mpcc_s);
-        double s_proj = std::max(current_mpcc_s, s_proj_raw);
+            ilqr_controller.projectSFromPosition(xi, yi, current_ilqr_s);
+        double s_proj = std::max(current_ilqr_s, s_proj_raw);
 
-        double dist_to_path_end = path_length_m - current_mpcc_s;
-        double progress_alpha = (dist_to_path_end < 0.2) ? 0.05 : 0.2;
+        double dist_to_path_end = path_length_m - current_ilqr_s;
+        double progress_alpha = (dist_to_path_end < current_path.alpha_threshold) ? current_path.progress_alpha_near : current_path.progress_alpha_far;
         double s_fused =
             progress_alpha * s_proj + (1.0 - progress_alpha) * s_predicted;
 
-        double max_lead = 0.20; // 8 inches max pull ahead
+        double max_lead = current_path.max_lead;
         s_fused = std::min(s_predicted, s_proj + max_lead);
+        // Near end of path: use actual projection, not predicted
+        if (dist_to_path_end < current_path.near_end_dist) {
+          s_fused = s_proj;
+        }
 
-        current_mpcc_s = std::max(current_mpcc_s, s_fused);
-        mpc_state.s = current_mpcc_s;
+        current_ilqr_s = std::max(current_ilqr_s, s_fused);
+        mpc_state.s = current_ilqr_s;
 
-        mpcc_controller.updateParameters(prev_mpcc_u, mpc_state.s, dt_mpc);
+        ILQR_Controller::Bounds bounds = current_path.control_bounds;
+  bounds.track_width = chassis.get_track_width_m();
+  ilqr_controller.setBounds(bounds);
 
-        // double end_scale = std::clamp(dist_to_path_end / 0.3, 0.4,
-        //                               1.0); // Don't scale below 40%
-        // MPCC_Controller::ControlBounds adjusted_bounds =
-        //     current_path.mpc_control_bounds;
-
-        // adjusted_bounds.v_max *= end_scale;
-        // adjusted_bounds.vs_max *= end_scale;
-
-        // mpcc_controller.setControlBounds(adjusted_bounds);
-        mpcc_controller.setControlBounds(current_path.mpc_control_bounds);
-
-        if (dist_to_path_end < 0.04) { // (~1.5 inches)
+        if (dist_to_path_end < tolerance_m) { // (~1.5 inches)
           mpc_sd_log_.end();
           state = MotionState::IDLE;
           chassis.tank(0, 0);
-          return;
+          continue;
         }
 
-        prev_mpcc_u = mpcc_controller.runStep(mpc_state, prev_mpcc_u);
-        MPCC_Controller::Control u = prev_mpcc_u;
+        prev_ilqr_u = ilqr_controller.runStep(mpc_state, prev_ilqr_u);
+        ILQR_Controller::Control u = prev_ilqr_u;
 
         if (!std::isfinite(u.v) || !std::isfinite(u.w) ||
             !std::isfinite(u.vs)) {
           u = {0.0, 0.0, 0.0};
         }
-        prev_mpcc_u = u;
+        prev_ilqr_u = u;
 
-        static MPCC_Controller::Control last_output = {0.0, 0.0, 0.0};
+        static ILQR_Controller::Control last_output = {0.0, 0.0, 0.0};
         u.w = std::clamp(u.w, last_output.w - current_path.max_dw_per_tick,
                          last_output.w + current_path.max_dw_per_tick);
         u.v = std::clamp(u.v, last_output.v - current_path.max_dv_per_tick,
@@ -388,17 +395,17 @@ void MotionManager::loop() {
         if (mpc_sd_log_.is_open()) {
           const double meas_v_ins = chassis.get_linear_velocity();
           const double meas_w_rads = chassis.get_angular_velocity();
-          const MPCC_Controller::SolveInfo si =
-              mpcc_controller.getLastSolveInfo();
-          const Pose refp = mpcc_controller.getPathPoseAtS(mpc_state.s);
-          const Pose refp_proj = mpcc_controller.getPathPoseAtS(s_proj);
-          mpc_sd_log_.log_row(
-              pros::millis(), mpcc_controller.getPathLength(), est.x, est.y,
-              est.theta_deg, est.lateral, mpc_state.x, mpc_state.y,
-              mpc_state.theta, mpc_state.vy, mpc_state.s, s_proj, 0.0,
-              current_mpcc_s, u.v, u.w, u.vs, si.status, si.time_ms,
-              si.sqp_iter, si.kkt_norm, refp.x, refp.y, refp.theta, meas_v_ins,
-              meas_w_rads, target_v, target_w);
+          const double solve_time_ms = ilqr_controller.getSolveTimeMs();
+          const int iterations = ilqr_controller.getIterations();
+          const Pose refp = ilqr_controller.getPathPoseAtS(mpc_state.s);
+          const Pose refp_proj = ilqr_controller.getPathPoseAtS(s_proj);
+          mpc_sd_log_.log_row(pros::millis(), ilqr_controller.getPathLength(),
+                              est.x, est.y, est.theta_deg, est.lateral,
+                              mpc_state.x, mpc_state.y, mpc_state.theta,
+                              mpc_state.vy, mpc_state.s, s_proj, 0.0,
+                              current_ilqr_s, u.v, u.w, u.vs, 0, solve_time_ms,
+                              iterations, 0.0, refp.x, refp.y, refp.theta,
+                              meas_v_ins, meas_w_rads, target_v, target_w);
         }
       }
     }

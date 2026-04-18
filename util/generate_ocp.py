@@ -54,7 +54,7 @@ def build_solver_local(
     kappa_threshold=4.0,
 ):
     if dt_list is None:
-        dt_list = [0.01]*10 + [0.02]*15
+        dt_list = [0.02]*15  # 15 nodes at 20ms = 300ms horizon
 
     N = len(dt_list)
     T = float(np.sum(dt_list))
@@ -355,13 +355,13 @@ def build_solver_local(
 
     # Solver options
     ocp.solver_options.time_steps = np.array(dt_list)
-    ocp.solver_options.qp_solver = "PARTIAL_CONDENSING_HPIPM"
+    ocp.solver_options.qp_solver = "FULL_CONDENSING_QPOASES"
     ocp.solver_options.hessian_approx = "GAUSS_NEWTON"
     ocp.solver_options.integrator_type = "DISCRETE"
-    ocp.solver_options.nlp_solver_type = "SQP_RTI"
+    ocp.solver_options.nlp_solver_type = "DDP"
     ocp.solver_options.regularize_method = "PROJECT"
     ocp.solver_options.qp_solver_cond_N = 5
-    ocp.solver_options.qp_solver_iter_max = 50
+    ocp.solver_options.qp_solver_iter_max = 15
     ocp.solver_options.qp_solver_warm_start = 2
     ocp.solver_options.ext_fun_compile_flags = "-O3"
     ocp.solver_options.tf = T

@@ -829,6 +829,44 @@ std::vector&lt;SensorConfig&gt; sensors = {
 </tr>
 </table>
 
+<h4>Degeneracy Detection Parameters</h4>
+<table>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+<th>Tuning Guidance</th>
+</tr>
+<tr>
+<td><code>ess_threshold</code></td>
+<td>Effective Sample Size threshold as a fraction of total particles. ESS measures how many particles actively contribute to the estimate.</td>
+<td>
+<strong>Low values (0.3):</strong> Allow more degeneracy before forced resample<br>
+<strong>High values (0.7):</strong> Resample earlier when particles converge<br>
+<strong>Typical value:</strong> 0.5 (resample when ESS drops below half of particles)
+</td>
+</tr>
+<tr>
+<td><code>degeneracy_timeout</code></td>
+<td>Time (seconds) to wait before forcing a resample when ESS is below threshold.</td>
+<td>
+<strong>Low values (0.1-0.2):</strong> Quick recovery from degeneracy<br>
+<strong>High values (0.5-1.0):</strong> Allow more time for natural recovery<br>
+<strong>Typical value:</strong> 0.3s (300ms timeout)
+</td>
+</tr>
+</table>
+
+<div class="info-box">
+<h4>What is Particle Degeneracy?</h4>
+<p>When sensor measurements strongly favor certain particles, their weights become dominant while others shrink. This reduces the Effective Sample Size (ESS). A low ESS means:</p>
+<ul>
+<li>Only a few particles contribute to the estimate</li>
+<li>The filter becomes overconfident in a single hypothesis</li>
+<li>Recovery from tracking errors becomes difficult</li>
+</ul>
+<p>The degeneracy detection forces a resample when ESS stays low for too long, ensuring the filter maintains particle diversity and can recover from tracking errors.</p>
+</div>
+
 <h4>Particle Injection Parameters</h4>
 <table>
 <tr>

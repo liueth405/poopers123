@@ -17,6 +17,8 @@ Chassis::Chassis(std::vector<int> left_ports, std::vector<int> right_ports,
         port, cartridge, pros::v5::MotorEncoderUnits::degrees);
     left_motors.push_back(std::move(m));
     left_data.push_back(MotorData());
+    left_ports_copy.push_back(port);
+    left_motor_devices.push_back(vexDeviceGetByIndex(std::abs(port) - 1));
   }
 
   for (int port : right_ports) {
@@ -24,6 +26,8 @@ Chassis::Chassis(std::vector<int> left_ports, std::vector<int> right_ports,
         port, cartridge, pros::v5::MotorEncoderUnits::degrees);
     right_motors.push_back(std::move(m));
     right_data.push_back(MotorData());
+    right_ports_copy.push_back(port);
+    right_motor_devices.push_back(vexDeviceGetByIndex(std::abs(port) - 1));
   }
 
   for (int port : imu_ports) {
@@ -76,6 +80,24 @@ void Chassis::init_blasfeo() {
   blasfeo_dgese(m, n, 0.0, &sG, 0, 0);
   blasfeo_dvecse(m, 0.0, &sx, 0);
   blasfeo_dvecse(m, 0.0, &su, 0);
+}
+
+void Chassis::set_brake_mode(BrakeMode mode) {
+  pros::v5::MotorBrake pros_mode = (mode == BrakeMode::HOLD)
+                                       ? pros::v5::MotorBrake::hold
+                                       : pros::v5::MotorBrake::coast;
+
+  for (size_t i = 0; i < left_motors.size(); ++i) {
+    if (left_motors[i]) {
+      left_motors[i]->set_brake_mode(pros_mode);
+    }
+  }
+
+  for (size_t i = 0; i < right_motors.size(); ++i) {
+    if (right_motors[i]) {
+      right_motors[i]->set_brake_mode(pros_mode);
+    }
+  }
 }
 
 void Chassis::set_gains(const GainsFG &gains) {

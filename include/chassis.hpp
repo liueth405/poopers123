@@ -46,11 +46,21 @@ struct Vec2 {
 };
 
 extern "C" {
-  typedef void *V5_DeviceT;
+typedef void *V5_DeviceT;
 
-  V5_DeviceT vexDeviceGetByIndex(uint32_t index); // device by index
-  uint32_t vexDeviceGetTimestamp(V5_DeviceT device); // last update time
-  int32_t vexDeviceDistanceDistanceGet(V5_DeviceT device); // distance (mm)
+typedef enum {
+  V5MotorBrakeMode_COAST = 0,
+  V5MotorBrakeMode_BRAKE = 1,
+  V5MotorBrakeMode_HOLD = 2
+} V5MotorBrakeMode;
+
+V5_DeviceT vexDeviceGetByIndex(uint32_t index);          // device by index
+uint32_t vexDeviceGetTimestamp(V5_DeviceT device);       // last update time
+int32_t vexDeviceDistanceDistanceGet(V5_DeviceT device); // distance (mm)
+void vexDeviceMotorVoltageSet(V5_DeviceT device, int32_t voltage);
+void vexDeviceMotorBrakeModeSet(V5_DeviceT device, V5MotorBrakeMode mode);
+double vexDeviceMotorPositionGet(V5_DeviceT device);
+void vexDeviceMotorPositionSet(V5_DeviceT device, double position);
 }
 
 /**
@@ -118,6 +128,7 @@ struct STSMCParams {
  */
 class Chassis {
   friend class SystemIdentification;
+
 public:
   struct MotorData {
     double position = 0;
@@ -139,6 +150,9 @@ public:
    * @brief Destroy the Chassis object, freeing blasfeo memory.
    */
   ~Chassis();
+
+  enum class BrakeMode { COAST, HOLD };
+  void set_brake_mode(BrakeMode mode);
 
   void tank(int left_voltage, int right_voltage);
 
@@ -162,6 +176,7 @@ public:
 
   double get_wheel_diameter() const { return wheelDiameter_m * 39.37; }
   double get_track_width() const { return trackWidth_m * 39.37; }
+  double get_track_width_m() const { return trackWidth_m; } // meters
 
   void update();
   void reset_sensors();
@@ -183,6 +198,10 @@ public:
 private:
   std::vector<std::unique_ptr<pros::v5::Motor>> left_motors;
   std::vector<std::unique_ptr<pros::v5::Motor>> right_motors;
+  std::vector<int> left_ports_copy;
+  std::vector<int> right_ports_copy;
+  std::vector<V5_DeviceT> left_motor_devices;
+  std::vector<V5_DeviceT> right_motor_devices;
   std::vector<std::unique_ptr<pros::v5::Imu>> imus;
   std::vector<std::unique_ptr<V5_DeviceT>> distances;
 
